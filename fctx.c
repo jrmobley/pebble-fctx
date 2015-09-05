@@ -142,6 +142,10 @@ void fctx_init_context_bw(FContext* fctx, GContext* gctx) {
 
 		fctx->gctx = gctx;
 		fctx->subpixel_adjust = -FIXED_POINT_SCALE / 2;
+		fctx->offset = FPointZero;
+		fctx->scale_from = FPointOne;
+		fctx->scale_to = FPointOne;
+		fctx->rotation = 0;
 	}
 }
 
@@ -359,6 +363,10 @@ void fctx_init_context_aa(FContext* fctx, GContext* gctx) {
 		fctx->fillColor = GColorWhite;
 		fctx->colorBias = 0;
 		fctx->subpixel_adjust = -1;
+		fctx->offset = FPointZero;
+		fctx->scale_from = FPointOne;
+		fctx->scale_to = FPointOne;
+		fctx->rotation = 0;
 	}
 }
 
