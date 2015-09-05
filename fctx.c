@@ -95,6 +95,19 @@ void fctx_set_color_bias(FContext* fctx, int16_t bias) {
 	fctx->colorBias = bias;
 }
 
+void fctx_set_offset(FContext* fctx, FPoint offset) {
+	fctx->offset = offset;
+}
+
+void fctx_set_scale(FContext* fctx, FPoint scale_from, FPoint scale_to) {
+	fctx->scale_from = scale_from;
+	fctx->scale_to = scale_to;
+}
+
+void fctx_set_rotation(FContext* fctx, uint32_t rotation) {
+	fctx->rotation = rotation;
+}
+
 // --------------------------------------------------------------------------
 // BW - black and white drawing with 1 bit-per-pixel flag buffer.
 // --------------------------------------------------------------------------
@@ -820,8 +833,10 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 // --------------------------------------------------------------------------
 
 void fctx_set_text_size(FContext* fctx, FFont* font, int16_t pixels) {
-	fctx->scale_from = FPoint(FIXED_TO_INT(font->units_per_em), FIXED_TO_INT(font->units_per_em));
-	fctx->scale_to     = FPoint(pixels, pixels);
+	fctx->scale_from.x = FIXED_TO_INT(font->units_per_em);
+	fctx->scale_from.y = -fctx->scale_from.x;
+	fctx->scale_to.x = pixels;
+	fctx->scale_to.y = pixels;
 }
 
 void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignment alignment, FTextAnchor anchor) {
