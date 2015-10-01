@@ -29,7 +29,7 @@ typedef struct FPoint {
 #define FPoint(x, y) ((FPoint){(x), (y)})
 #define FPointI(x, y) ((FPoint){INT_TO_FIXED(x), INT_TO_FIXED(y)})
 #define FPointZero FPoint(0, 0)
-#define FPointOne FPoint(1, 1);
+#define FPointOne FPoint(1, 1)
 
 static inline bool fpoint_equal(const FPoint* const a, const FPoint* const b) {
 	return a->x == b->x && a->y == b->y;
