@@ -714,8 +714,10 @@ void fctx_draw_path(FContext* fctx, FPoint* points, uint32_t num_points) {
 		int32_t c = cos_lookup(fctx->rotation);
 		int32_t s = sin_lookup(fctx->rotation);
 		while (src != end) {
-			dest->x = (src->x * c / TRIG_MAX_RATIO) - (src->y * s / TRIG_MAX_RATIO);
-			dest->y = (src->x * s / TRIG_MAX_RATIO) + (src->y * c / TRIG_MAX_RATIO);
+			fixed_t x = src->x * fctx->scale_to.x / fctx->scale_from.x;
+			fixed_t y = src->y * fctx->scale_to.y / fctx->scale_from.y;
+			dest->x = (x * c / TRIG_MAX_RATIO) - (y * s / TRIG_MAX_RATIO);
+			dest->y = (x * s / TRIG_MAX_RATIO) + (y * c / TRIG_MAX_RATIO);
 			dest->x += fctx->offset.x + fctx->subpixel_adjust;
 			dest->y += fctx->offset.y + fctx->subpixel_adjust;
 			
