@@ -29,7 +29,7 @@ typedef struct FPoint {
 #define FPoint(x, y) ((FPoint){(x), (y)})
 #define FPointI(x, y) ((FPoint){INT_TO_FIXED(x), INT_TO_FIXED(y)})
 #define FPointZero FPoint(0, 0)
-#define FPointOne FPoint(1, 1);
+#define FPointOne FPoint(1, 1)
 
 static inline bool fpoint_equal(const FPoint* const a, const FPoint* const b) {
 	return a->x == b->x && a->y == b->y;
@@ -63,7 +63,7 @@ typedef struct FRect {
 
 typedef struct FContext {
 	GContext* gctx;
-	GBitmap* flagBuffer;
+	GBitmap* flag_buffer;
 	FPoint min;
 	FPoint max;
     FPoint cp;
@@ -73,8 +73,8 @@ typedef struct FContext {
     fixed_t rotation;
 	fixed_t subpixel_adjust;
 
-    GColor fillColor;
-	int16_t colorBias;
+    GColor fill_color;
+	int16_t color_bias;
 } FContext;
 
 void fctx_set_fill_color(FContext* fctx, GColor c);
@@ -89,18 +89,21 @@ void fctx_curve_to  (FContext* fctx, FPoint cp0, FPoint cp1, FPoint p);
 void fctx_draw_path (FContext* fctx, FPoint* points, uint32_t num_points);
 
 typedef void (*fctx_init_context_func)(FContext* fctx, GContext* gctx);
-typedef void (*fctx_begin_fill_func)(FContext* fctx);
 typedef void (*fctx_plot_edge_func)(FContext* fctx, FPoint* a, FPoint* b);
 typedef void (*fctx_plot_circle_func)(FContext* fctx, const FPoint* c, fixed_t r);
 typedef void (*fctx_end_fill_func)(FContext* fctx);
-typedef void (*fctx_deinit_context_func)(FContext* fctx);
 
 extern fctx_init_context_func fctx_init_context;
-extern fctx_begin_fill_func fctx_begin_fill;
+extern void fctx_begin_fill(FContext* fctx);
 extern fctx_plot_edge_func fctx_plot_edge;
 extern fctx_plot_circle_func fctx_plot_circle;
 extern fctx_end_fill_func fctx_end_fill;
-extern fctx_deinit_context_func fctx_deinit_context;
+extern void fctx_deinit_context(FContext* fctx);
+
+#ifdef PBL_COLOR
+void fctx_enable_aa(bool enable);
+bool fpath_is_aa_enabled();
+#endif
 
 // -----------------------------------------------------------------------------
 // Compiled SVG path drawing.
