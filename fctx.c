@@ -43,6 +43,31 @@ bool checkObject(void* obj, const char* objname) {
 }
 
 // --------------------------------------------------------------------------
+// TEMPORARY polyfill until SDK 3.6 and the SDK3 Grand Unification.
+// --------------------------------------------------------------------------
+
+#if !defined(PBL_IF_COLOR_ELSE) || defined(PBL_SDK_2)
+
+typedef struct GBitmapDataRowInfo {
+    uint8_t* data;
+    int16_t min_x;
+    int16_t max_x;
+} GBitmapDataRowInfo;
+
+static inline GBitmapDataRowInfo gbitmap_get_data_row_info(const GBitmap* bitmap, uint16_t y) {
+    uint8_t* data = gbitmap_get_data(bitmap);
+    uint16_t stride = gbitmap_get_bytes_per_row(bitmap);
+    GRect bounds = gbitmap_get_bounds(bitmap);
+    GBitmapDataRowInfo info;
+    info.data = data + stride * y;
+    info.min_x = bounds.origin.x;
+    info.max_x = bounds.origin.x + bounds.size.w - 1;
+    return info;
+}
+
+#endif
+
+// --------------------------------------------------------------------------
 // Drawing support that is shared between BW and AA.
 // --------------------------------------------------------------------------
 
@@ -272,11 +297,6 @@ void fctx_end_fill_bw(FContext* fctx) {
 	uint16_t colEnd   = FIXED_TO_INT(fctx->max.x) + 1;
 
 	GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
-	uint8_t* fbData = gbitmap_get_data(fb);
-	uint16_t fbStride = gbitmap_get_bytes_per_row(fb);
-
-	uint8_t* data = gbitmap_get_data(fctx->flag_buffer);
-	uint16_t stride = gbitmap_get_bytes_per_row(fctx->flag_buffer);
 
 	uint8_t* dest;
 	uint8_t* src;
@@ -284,16 +304,20 @@ void fctx_end_fill_bw(FContext* fctx) {
 	uint16_t col, row;
 
 	for (row = rowBegin; row < rowEnd; ++row) {
+        GBitmapDataRowInfo fbRowInfo = gbitmap_get_data_row_info(fb, row);
+		GBitmapDataRowInfo flagRowInfo = gbitmap_get_data_row_info(fctx->flag_buffer, row);
+		uint16_t spanBegin = (fbRowInfo.min_x > colBegin) ? fbRowInfo.min_x : colBegin;
+		uint16_t spanEnd = (fbRowInfo.max_x < colEnd) ? fbRowInfo.max_x : colEnd;
 
 		bool inside = false;
-		for (col = colBegin; col <= colEnd; ++col) {
+		for (col = spanBegin; col <= spanEnd; ++col) {
 
 #ifdef PBL_COLOR
-			dest = fbData + fbStride * row + col;
+			dest = fbRowInfo.data + col;
 #else
-			dest = fbData + fbStride * row + col / 8;
+			dest = fbRowInfo.data + col / 8;
 #endif
-			src = data + stride * row + col / 8;
+			src = flagRowInfo.data + col / 8;
 			mask = 1 << (col % 8);
 			if (*src & mask) {
 				inside = !inside;
