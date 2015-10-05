@@ -771,7 +771,7 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 		FPathDrawCommand* cmd = (FPathDrawCommand*)path_data;
 		fixed16_t* param = (fixed16_t*)&cmd->params;
 		switch (cmd->code) {
-			case 'M':
+			case 'M': // "moveto"
 				func = fctx_move_to_func;
 				pcount = 1;
 				ppoints[0].x = *param++;
@@ -779,34 +779,34 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 				curpt = ppoints[0];
 				initpt = curpt;
 				break;
-			case 'Z':
+			case 'Z': // "closepath"
 				func = fctx_line_to_func;
 				pcount = 1;
 				ppoints[0] = initpt;
 				curpt = ppoints[0];
 				break;
-			case 'L':
+			case 'L': // "lineto"
 				func = fctx_line_to_func;
 				pcount = 1;
 				ppoints[0].x = *param++;
 				ppoints[0].y = *param++;
 				curpt = ppoints[0];
 				break;
-			case 'H':
+			case 'H': // "horizontal lineto"
 				func = fctx_line_to_func;
 				pcount = 1;
 				ppoints[0].x = *param++;
 				ppoints[0].y = curpt.y;
 				curpt.x = ppoints[0].x;
 				break;
-			case 'V':
+			case 'V': // "vertical lineto"
 				func = fctx_line_to_func;
 				pcount = 1;
 				ppoints[0].x = curpt.x;
 				ppoints[0].y = *param++;
 				curpt.y = ppoints[0].y;
 				break;
-			case 'C':
+			case 'C': // "cubic bezier curveto"
 				func = fctx_curve_to_func;
 				pcount = 3;
 				ppoints[0].x = *param++;
@@ -818,7 +818,7 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 				ctrlpt = ppoints[1];
 				curpt = ppoints[2];
 				break;
-			case 'S':
+			case 'S': // "smooth cubic bezier curveto"
 				func = fctx_curve_to_func;
 				pcount = 3;
 				ppoints[1].x = *param++;
@@ -830,6 +830,32 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 				ctrlpt = ppoints[1];
 				curpt = ppoints[2];
 				break;
+            case 'Q': // "quadratic bezier curveto"
+				func = fctx_curve_to_func;
+				pcount = 3;
+                ctrlpt.x = *param++;
+                ctrlpt.y = *param++;
+				ppoints[2].x = *param++;
+				ppoints[2].y = *param++;
+                ppoints[0].x = (curpt.x      + 2 * ctrlpt.x) / 3;
+				ppoints[0].y = (curpt.y      + 2 * ctrlpt.y) / 3;
+				ppoints[1].x = (ppoints[2].x + 2 * ctrlpt.x) / 3;
+				ppoints[1].y = (ppoints[2].y + 2 * ctrlpt.y) / 3;
+				curpt = ppoints[2];
+				break;
+            case 'T': // "smooth quadratic bezier curveto"
+                func = fctx_curve_to_func;
+                pcount = 3;
+                ctrlpt.x = curpt.x - ctrlpt.x + curpt.x;
+                ctrlpt.y = curpt.y - ctrlpt.y + curpt.y;
+                ppoints[2].x = *param++;
+                ppoints[2].y = *param++;
+                ppoints[0].x = (curpt.x      + 2 * ctrlpt.x) / 3;
+                ppoints[0].y = (curpt.y      + 2 * ctrlpt.y) / 3;
+                ppoints[1].x = (ppoints[2].x + 2 * ctrlpt.x) / 3;
+                ppoints[1].y = (ppoints[2].y + 2 * ctrlpt.y) / 3;
+                curpt = ppoints[2];
+                break;
 			default:
 				APP_LOG(APP_LOG_LEVEL_ERROR, "invalid draw command \"%c\"", cmd->code);
 				return;
