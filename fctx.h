@@ -20,7 +20,6 @@ typedef struct FFont FFont;
 #define FIXED_TO_INT(a) ((a) / FIXED_POINT_SCALE)
 #define FIXED_MULTIPLY(a, b) (((a) * (b)) / FIXED_POINT_SCALE)
 #define FIX1 FIXED_POINT_SCALE
-#define FRAC12 = (F1/2)
 
 typedef struct FPoint {
     fixed_t x;
