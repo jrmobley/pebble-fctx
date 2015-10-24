@@ -115,13 +115,15 @@ int32_t edge_step(Edge* e) {
 void fctx_begin_fill(FContext* fctx) {
 
 	GRect bounds = gbitmap_get_bounds(fctx->flag_buffer);
-	fctx->max.x = INT_TO_FIXED(bounds.origin.x);
-	fctx->max.y = INT_TO_FIXED(bounds.origin.y);
-	fctx->min.x = INT_TO_FIXED(bounds.origin.x + bounds.size.w);
-	fctx->min.y = INT_TO_FIXED(bounds.origin.y + bounds.size.h);
+	fctx->extent_max.x = INT_TO_FIXED(bounds.origin.x);
+	fctx->extent_max.y = INT_TO_FIXED(bounds.origin.y);
+	fctx->extent_min.x = INT_TO_FIXED(bounds.origin.x + bounds.size.w);
+	fctx->extent_min.y = INT_TO_FIXED(bounds.origin.y + bounds.size.h);
 
-    fctx->cp.x = 0;
-    fctx->cp.y = 0;
+    fctx->path_init_point.x = 0;
+    fctx->path_init_point.y = 0;
+    fctx->path_cur_point.x = 0;
+    fctx->path_cur_point.y = 0;
 }
 
 void fctx_deinit_context(FContext* fctx) {
@@ -140,16 +142,16 @@ void fctx_set_color_bias(FContext* fctx, int16_t bias) {
 }
 
 void fctx_set_offset(FContext* fctx, FPoint offset) {
-	fctx->offset = offset;
+	fctx->transform_offset = offset;
 }
 
 void fctx_set_scale(FContext* fctx, FPoint scale_from, FPoint scale_to) {
-	fctx->scale_from = scale_from;
-	fctx->scale_to = scale_to;
+	fctx->transform_scale_from = scale_from;
+	fctx->transform_scale_to = scale_to;
 }
 
 void fctx_set_rotation(FContext* fctx, uint32_t rotation) {
-	fctx->rotation = rotation;
+	fctx->transform_rotation = rotation;
 }
 
 // --------------------------------------------------------------------------
@@ -199,10 +201,10 @@ void fctx_init_context_bw(FContext* fctx, GContext* gctx) {
 
 		fctx->gctx = gctx;
 		fctx->subpixel_adjust = -FIXED_POINT_SCALE / 2;
-		fctx->offset = FPointZero;
-		fctx->scale_from = FPointOne;
-		fctx->scale_to = FPointOne;
-		fctx->rotation = 0;
+		fctx->transform_offset = FPointZero;
+		fctx->transform_scale_from = FPointOne;
+		fctx->transform_scale_to = FPointOne;
+		fctx->transform_rotation = 0;
 	}
 }
 
@@ -236,10 +238,10 @@ static inline void fctx_plot_point_bw(uint8_t* data, uint16_t stride, int16_t x,
 void fctx_plot_circle_bw(FContext* fctx, const FPoint* fc, fixed_t fr) {
 
 	/* Expand the bounding box of pixels drawn. */
-	if ((fc->x-fr) < fctx->min.x) fctx->min.x = fc->x - fr;
-	if ((fc->y-fr) < fctx->min.y) fctx->min.y = fc->y - fr;
-	if ((fc->x+fr) > fctx->max.x) fctx->max.x = fc->x + fr;
-	if ((fc->y+fr) > fctx->max.y) fctx->max.y = fc->y + fr;
+	if ((fc->x-fr) < fctx->extent_min.x) fctx->extent_min.x = fc->x - fr;
+	if ((fc->y-fr) < fctx->extent_min.y) fctx->extent_min.y = fc->y - fr;
+	if ((fc->x+fr) > fctx->extent_max.x) fctx->extent_max.x = fc->x + fr;
+	if ((fc->y+fr) > fctx->extent_max.y) fctx->extent_max.y = fc->y + fr;
 
 	int16_t r = FIXED_TO_INT(fr);
 	int16_t cx = FIXED_TO_INT(fc->x);
@@ -291,10 +293,10 @@ void fctx_end_fill_bw(FContext* fctx) {
 	uint8_t color = gcolor_equal(fctx->fill_color, GColorWhite) ? 0xff : 0x00;
 #endif
 
-	uint16_t rowBegin = FIXED_TO_INT(fctx->min.y);
-	uint16_t rowEnd   = FIXED_TO_INT(fctx->max.y) + 1;
-	uint16_t colBegin = FIXED_TO_INT(fctx->min.x);
-	uint16_t colEnd   = FIXED_TO_INT(fctx->max.x) + 1;
+	uint16_t rowBegin = FIXED_TO_INT(fctx->extent_min.y);
+	uint16_t rowEnd   = FIXED_TO_INT(fctx->extent_max.y) + 1;
+	uint16_t colBegin = FIXED_TO_INT(fctx->extent_min.x);
+	uint16_t colEnd   = FIXED_TO_INT(fctx->extent_max.x) + 1;
 
 	GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
 
@@ -400,10 +402,10 @@ void fctx_init_context_aa(FContext* fctx, GContext* gctx) {
 		fctx->fill_color = GColorWhite;
 		fctx->color_bias = 0;
 		fctx->subpixel_adjust = -1;
-		fctx->offset = FPointZero;
-		fctx->scale_from = FPointOne;
-		fctx->scale_to = FPointOne;
-		fctx->rotation = 0;
+		fctx->transform_offset = FPointZero;
+		fctx->transform_scale_from = FPointOne;
+		fctx->transform_scale_to = FPointOne;
+		fctx->transform_rotation = 0;
 	}
 }
 
@@ -449,10 +451,10 @@ static inline void fctx_plot_point(uint8_t* data, uint16_t stride, fixed_t x, fi
 void fctx_plot_circle_aa(FContext* fctx, const FPoint* c, fixed_t r) {
 
 	/* Expand the bounding box of pixels drawn. */
-	if ((c->x-r) < fctx->min.x) fctx->min.x = c->x - r;
-	if ((c->y-r) < fctx->min.y) fctx->min.y = c->y - r;
-	if ((c->x+r) > fctx->max.x) fctx->max.x = c->x + r;
-	if ((c->y+r) > fctx->max.y) fctx->max.y = c->y + r;
+	if ((c->x-r) < fctx->extent_min.x) fctx->extent_min.x = c->x - r;
+	if ((c->y-r) < fctx->extent_min.y) fctx->extent_min.y = c->y - r;
+	if ((c->x+r) > fctx->extent_max.x) fctx->extent_max.x = c->x + r;
+	if ((c->y+r) > fctx->extent_max.y) fctx->extent_max.y = c->y + r;
 
 	/* Throw away the extra bit of fixed point precision and
 	 * work directly in subpixels.
@@ -516,10 +518,10 @@ static inline int8_t clamp8(int8_t val, int8_t min, int8_t max) {
 
 void fctx_end_fill_aa(FContext* fctx) {
 
-	uint16_t rowBegin = FIXED_TO_INT(fctx->min.y);
-	uint16_t rowEnd   = FIXED_TO_INT(fctx->max.y) + 2;
-	uint16_t colBegin = FIXED_TO_INT(fctx->min.x);
-	uint16_t colEnd   = FIXED_TO_INT(fctx->max.x) + 2;
+	uint16_t rowBegin = FIXED_TO_INT(fctx->extent_min.y);
+	uint16_t rowEnd   = FIXED_TO_INT(fctx->extent_max.y) + 2;
+	uint16_t colBegin = FIXED_TO_INT(fctx->extent_min.x);
+	uint16_t colEnd   = FIXED_TO_INT(fctx->extent_max.x) + 2;
 
 	GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
 
@@ -648,55 +650,58 @@ void bezier(FContext* fctx,
 }
 
 void fctx_move_to_func(FContext* fctx, FPoint* params) {
-	fctx->cp = params[0];
+    fctx->path_init_point = params[0];
+	fctx->path_cur_point = params[0];
 }
 
 void fctx_line_to_func(FContext* fctx, FPoint* params) {
-	fctx_plot_edge(fctx, &fctx->cp, params + 0);
-	fctx->cp = params[0];
+	fctx_plot_edge(fctx, &fctx->path_cur_point, params + 0);
+	fctx->path_cur_point = params[0];
 }
 
 void fctx_curve_to_func(FContext* fctx, FPoint* params) {
 	bezier(fctx,
-		   fctx->cp.x, fctx->cp.y,
+		   fctx->path_cur_point.x, fctx->path_cur_point.y,
 		   params[0].x, params[0].y,
 		   params[1].x, params[1].y,
 		   params[2].x, params[2].y);
-	fctx->cp = params[2];
+	fctx->path_cur_point = params[2];
 }
 
 typedef void (*fctx_draw_cmd_func)(FContext* fctx, FPoint* params);
 
-void exec_draw_func(FContext* fctx, FPoint advance, fctx_draw_cmd_func func, FPoint* ppoints, uint16_t pcount) {
+void fctx_transform_points(FContext* fctx, uint16_t pcount, FPoint* ppoints, FPoint* tpoints, FPoint advance) {
 
-	FPoint tpoints[3];
-	int32_t c = cos_lookup(fctx->rotation);
-	int32_t s = sin_lookup(fctx->rotation);
+	int32_t c = cos_lookup(fctx->transform_rotation);
+	int32_t s = sin_lookup(fctx->transform_rotation);
 
 	/* transform the parameters */
 	FPoint* src = ppoints;
 	FPoint* dst = tpoints;
 	FPoint* end = dst + pcount;
 	while (dst != end) {
-		fixed_t x = (src->x + advance.x) * fctx->scale_to.x / fctx->scale_from.x;
-		fixed_t y = (src->y + advance.y) * fctx->scale_to.y / fctx->scale_from.y;
+		fixed_t x = (src->x + advance.x) * fctx->transform_scale_to.x / fctx->transform_scale_from.x;
+		fixed_t y = (src->y + advance.y) * fctx->transform_scale_to.y / fctx->transform_scale_from.y;
 		dst->x = (x * c / TRIG_MAX_RATIO) - (y * s / TRIG_MAX_RATIO);
 		dst->y = (x * s / TRIG_MAX_RATIO) + (y * c / TRIG_MAX_RATIO);
-		dst->x += fctx->offset.x + fctx->subpixel_adjust;
-		dst->y += fctx->offset.y + fctx->subpixel_adjust;
+		dst->x += fctx->transform_offset.x + fctx->subpixel_adjust;
+		dst->y += fctx->transform_offset.y + fctx->subpixel_adjust;
 
 		// grow a bounding box around the points visited.
-		if (dst->x < fctx->min.x) fctx->min.x = dst->x;
-		if (dst->y < fctx->min.y) fctx->min.y = dst->y;
-		if (dst->x > fctx->max.x) fctx->max.x = dst->x;
-		if (dst->y > fctx->max.y) fctx->max.y = dst->y;
+		if (dst->x < fctx->extent_min.x) fctx->extent_min.x = dst->x;
+		if (dst->y < fctx->extent_min.y) fctx->extent_min.y = dst->y;
+		if (dst->x > fctx->extent_max.x) fctx->extent_max.x = dst->x;
+		if (dst->y > fctx->extent_max.y) fctx->extent_max.y = dst->y;
 
 		++src;
 		++dst;
 	}
+}
 
-	/* call the draw func with transformed parameters */
-	func(fctx, tpoints);
+void exec_draw_func(FContext* fctx, FPoint advance, fctx_draw_cmd_func func, FPoint* ppoints, uint16_t pcount) {
+    FPoint tpoints[3];
+    fctx_transform_points(fctx, pcount, ppoints, tpoints, advance);
+    func(fctx, tpoints);
 }
 
 void fctx_move_to(FContext* fctx, FPoint p) {
@@ -715,6 +720,11 @@ void fctx_curve_to(FContext* fctx, FPoint cp0, FPoint cp1, FPoint p) {
 	exec_draw_func(fctx, FPointZero, fctx_curve_to_func, points, 3);
 }
 
+void fctx_close_path(FContext* fctx) {
+    fctx_plot_edge(fctx, &fctx->path_cur_point, &fctx->path_init_point);
+    fctx->path_cur_point = fctx->path_init_point;
+}
+
 void fctx_draw_path(FContext* fctx, FPoint* points, uint32_t num_points) {
 
 	// allocate buffer for transformed points.
@@ -725,21 +735,21 @@ void fctx_draw_path(FContext* fctx, FPoint* points, uint32_t num_points) {
 		FPoint* src = points;
 		FPoint* end = src + num_points;
 		FPoint* dest = tpoints;
-		int32_t c = cos_lookup(fctx->rotation);
-		int32_t s = sin_lookup(fctx->rotation);
+		int32_t c = cos_lookup(fctx->transform_rotation);
+		int32_t s = sin_lookup(fctx->transform_rotation);
 		while (src != end) {
-			fixed_t x = src->x * fctx->scale_to.x / fctx->scale_from.x;
-			fixed_t y = src->y * fctx->scale_to.y / fctx->scale_from.y;
+			fixed_t x = src->x * fctx->transform_scale_to.x / fctx->transform_scale_from.x;
+			fixed_t y = src->y * fctx->transform_scale_to.y / fctx->transform_scale_from.y;
 			dest->x = (x * c / TRIG_MAX_RATIO) - (y * s / TRIG_MAX_RATIO);
 			dest->y = (x * s / TRIG_MAX_RATIO) + (y * c / TRIG_MAX_RATIO);
-			dest->x += fctx->offset.x + fctx->subpixel_adjust;
-			dest->y += fctx->offset.y + fctx->subpixel_adjust;
+			dest->x += fctx->transform_offset.x + fctx->subpixel_adjust;
+			dest->y += fctx->transform_offset.y + fctx->subpixel_adjust;
 
 			// grow a bounding box around the points visited.
-			if (dest->x < fctx->min.x) fctx->min.x = dest->x;
-			if (dest->y < fctx->min.y) fctx->min.y = dest->y;
-			if (dest->x > fctx->max.x) fctx->max.x = dest->x;
-			if (dest->y > fctx->max.y) fctx->max.y = dest->y;
+			if (dest->x < fctx->extent_min.x) fctx->extent_min.x = dest->x;
+			if (dest->y < fctx->extent_min.y) fctx->extent_min.y = dest->y;
+			if (dest->x > fctx->extent_max.x) fctx->extent_max.x = dest->x;
+			if (dest->y > fctx->extent_max.y) fctx->extent_max.y = dest->y;
 
 			++src;
 			++dest;
@@ -875,10 +885,10 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 // --------------------------------------------------------------------------
 
 void fctx_set_text_size(FContext* fctx, FFont* font, int16_t pixels) {
-	fctx->scale_from.x = FIXED_TO_INT(font->units_per_em);
-	fctx->scale_from.y = -fctx->scale_from.x;
-	fctx->scale_to.x = pixels;
-	fctx->scale_to.y = pixels;
+	fctx->transform_scale_from.x = FIXED_TO_INT(font->units_per_em);
+	fctx->transform_scale_from.y = -fctx->transform_scale_from.x;
+	fctx->transform_scale_to.x = pixels;
+	fctx->transform_scale_to.y = pixels;
 }
 
 void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignment alignment, FTextAnchor anchor) {
