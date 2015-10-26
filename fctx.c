@@ -44,6 +44,9 @@ bool checkObject(void* obj, const char* objname) {
 
 // --------------------------------------------------------------------------
 // TEMPORARY polyfill until SDK 3.6 and the SDK3 Grand Unification.
+// The docs suggest, and experiment confirms, that [min_x..max_x] is an
+// inclusive range, i.e. the pixel at max_x is addressable and the width of
+// the range is (max_x - min_x + 1).
 // --------------------------------------------------------------------------
 
 #if !defined(PBL_IF_COLOR_ELSE) || defined(PBL_SDK_2)
@@ -293,10 +296,10 @@ void fctx_end_fill_bw(FContext* fctx) {
 	uint8_t color = gcolor_equal(fctx->fill_color, GColorWhite) ? 0xff : 0x00;
 #endif
 
-	uint16_t rowBegin = FIXED_TO_INT(fctx->extent_min.y);
-	uint16_t rowEnd   = FIXED_TO_INT(fctx->extent_max.y) + 1;
-	uint16_t colBegin = FIXED_TO_INT(fctx->extent_min.x);
-	uint16_t colEnd   = FIXED_TO_INT(fctx->extent_max.x) + 1;
+	uint16_t rowMin = FIXED_TO_INT(fctx->extent_min.y);
+	uint16_t rowMax = FIXED_TO_INT(fctx->extent_max.y);
+	uint16_t colMin = FIXED_TO_INT(fctx->extent_min.x);
+	uint16_t colMax = FIXED_TO_INT(fctx->extent_max.x);
 
 	GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
 
@@ -305,14 +308,14 @@ void fctx_end_fill_bw(FContext* fctx) {
 	uint8_t mask;
 	uint16_t col, row;
 
-	for (row = rowBegin; row < rowEnd; ++row) {
+	for (row = rowMin; row <= rowMax; ++row) {
         GBitmapDataRowInfo fbRowInfo = gbitmap_get_data_row_info(fb, row);
 		GBitmapDataRowInfo flagRowInfo = gbitmap_get_data_row_info(fctx->flag_buffer, row);
-		uint16_t spanBegin = (fbRowInfo.min_x > colBegin) ? fbRowInfo.min_x : colBegin;
-		uint16_t spanEnd = (fbRowInfo.max_x < colEnd) ? fbRowInfo.max_x : colEnd;
+		uint16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
+		uint16_t spanMax = (fbRowInfo.max_x < colMax) ? fbRowInfo.max_x : colMax;
 
 		bool inside = false;
-		for (col = spanBegin; col <= spanEnd; ++col) {
+		for (col = spanMin; col <= spanMax; ++col) {
 
 #ifdef PBL_COLOR
 			dest = fbRowInfo.data + col;
@@ -393,12 +396,11 @@ void fctx_init_context_aa(FContext* fctx, GContext* gctx) {
 
 	GBitmap* frameBuffer = graphics_capture_frame_buffer(gctx);
 	if (frameBuffer) {
+        GBitmapFormat format = gbitmap_get_format(frameBuffer);
 		GRect bounds = gbitmap_get_bounds(frameBuffer);
 		graphics_release_frame_buffer(gctx, frameBuffer);
-		bounds.size.w += 1;
-		bounds.size.h += 1;
 		fctx->gctx = gctx;
-		fctx->flag_buffer = gbitmap_create_blank(bounds.size, GBitmapFormat8Bit);
+		fctx->flag_buffer = gbitmap_create_blank(bounds.size, format);
 		fctx->fill_color = GColorWhite;
 		fctx->color_bias = 0;
 		fctx->subpixel_adjust = -1;
@@ -422,29 +424,28 @@ void fctx_plot_edge_aa(FContext* fctx, FPoint* a, FPoint* b) {
 		edge_init_aa(&edge, a, b);
 	}
 
-	uint8_t* data = gbitmap_get_data(fctx->flag_buffer);
-	int16_t stride = gbitmap_get_bytes_per_row(fctx->flag_buffer);
 	int32_t height = edge.height;
 	while (height--) {
 		int32_t ySub = edge.y & (SUBPIXEL_COUNT - 1);
 		uint8_t mask = 1 << ySub;
 		int32_t pixelX = (edge.x + k_sampling_offsets[ySub]) / SUBPIXEL_COUNT;
 		int32_t pixelY = edge.y / SUBPIXEL_COUNT;
-
-		uint8_t* p = data + pixelY * stride + pixelX;
+        GBitmapDataRowInfo row = gbitmap_get_data_row_info(fctx->flag_buffer, pixelY);
+        uint8_t* p = row.data + pixelX;
 		*p ^= mask;
 
 		edge_step(&edge);
 	}
 }
 
-static inline void fctx_plot_point(uint8_t* data, uint16_t stride, fixed_t x, fixed_t y) {
+static inline void fctx_plot_point(GBitmap* bitmap, fixed_t x, fixed_t y) {
 	int32_t ySub = y & (SUBPIXEL_COUNT - 1);
 	uint8_t mask = 1 << ySub;
 	int32_t pixelX = (x + k_sampling_offsets[ySub]) / SUBPIXEL_COUNT;
 	int32_t pixelY = y / SUBPIXEL_COUNT;
 
-	uint8_t* p = data + pixelY * stride + pixelX;
+    GBitmapDataRowInfo row = gbitmap_get_data_row_info(bitmap, pixelY);
+    uint8_t* p = row.data + pixelX;
 	*p ^= mask;
 }
 
@@ -463,18 +464,15 @@ void fctx_plot_circle_aa(FContext* fctx, const FPoint* c, fixed_t r) {
 	fixed_t cx = c->x / 2;
 	fixed_t cy = c->y / 2;
 
-	uint8_t* data = gbitmap_get_data(fctx->flag_buffer);
-	int16_t stride = gbitmap_get_bytes_per_row(fctx->flag_buffer);
-
 	fixed_t m = r - 1;
 	fixed_t n = 0;
 	fixed_t E = 1 - 2*r;
 	while (m >= n) {
 
-		fctx_plot_point(data, stride, cx-m-1, cy+n);
-		fctx_plot_point(data, stride, cx+m+1, cy+n);
-		fctx_plot_point(data, stride, cx-m-1, cy-n-1);
-		fctx_plot_point(data, stride, cx+m+1, cy-n-1);
+        fctx_plot_point(fctx->flag_buffer, cx-m-1, cy+n);
+        fctx_plot_point(fctx->flag_buffer, cx+m+1, cy+n);
+        fctx_plot_point(fctx->flag_buffer, cx-m-1, cy-n-1);
+        fctx_plot_point(fctx->flag_buffer, cx+m+1, cy-n-1);
 
 		E += 4*n + 4;
 		if (E > 0) {
@@ -488,11 +486,11 @@ void fctx_plot_circle_aa(FContext* fctx, const FPoint* c, fixed_t r) {
 			 * with the edge-flag algorithm, complete erases the span!
 			 */
 			if (m != n) {
-				fctx_plot_point(data, stride, cx-n-1, cy+m);
-				fctx_plot_point(data, stride, cx+n+1, cy+m);
-				fctx_plot_point(data, stride, cx-n-1, cy-m-1);
-				fctx_plot_point(data, stride, cx+n+1, cy-m-1);
-			}
+                fctx_plot_point(fctx->flag_buffer, cx-n-1, cy+m);
+                fctx_plot_point(fctx->flag_buffer, cx+n+1, cy+m);
+                fctx_plot_point(fctx->flag_buffer, cx-n-1, cy-m-1);
+                fctx_plot_point(fctx->flag_buffer, cx+n+1, cy-m-1);
+            }
 
 			E += -4*m;
 			--m;
@@ -518,10 +516,10 @@ static inline int8_t clamp8(int8_t val, int8_t min, int8_t max) {
 
 void fctx_end_fill_aa(FContext* fctx) {
 
-	uint16_t rowBegin = FIXED_TO_INT(fctx->extent_min.y);
-	uint16_t rowEnd   = FIXED_TO_INT(fctx->extent_max.y) + 2;
-	uint16_t colBegin = FIXED_TO_INT(fctx->extent_min.x);
-	uint16_t colEnd   = FIXED_TO_INT(fctx->extent_max.x) + 2;
+	uint16_t rowMin = FIXED_TO_INT(fctx->extent_min.y);
+	uint16_t rowMax = FIXED_TO_INT(fctx->extent_max.y) + 1;
+	uint16_t colMin = FIXED_TO_INT(fctx->extent_min.x);
+	uint16_t colMax = FIXED_TO_INT(fctx->extent_max.x) + 1;
 
 	GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
 
@@ -530,16 +528,16 @@ void fctx_end_fill_aa(FContext* fctx) {
 	GColor8 d;
 	GColor8 s = fctx->fill_color;
 	int16_t bias = fctx->color_bias;
-	for (row = rowBegin; row < rowEnd; ++row) {
+	for (row = rowMin; row <= rowMax; ++row) {
 		GBitmapDataRowInfo fbRowInfo = gbitmap_get_data_row_info(fb, row);
 		GBitmapDataRowInfo flagRowInfo = gbitmap_get_data_row_info(fctx->flag_buffer, row);
-		uint16_t spanBegin = (fbRowInfo.min_x > colBegin) ? fbRowInfo.min_x : colBegin;
-		uint16_t spanEnd = (fbRowInfo.max_x < colEnd) ? fbRowInfo.max_x : colEnd;
-		uint8_t* dest = fbRowInfo.data + spanBegin;
-		uint8_t* src = flagRowInfo.data + spanBegin;
+		uint16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
+		uint16_t spanMax = (fbRowInfo.max_x < colMax) ? fbRowInfo.max_x : colMax;
+		uint8_t* dest = fbRowInfo.data + spanMin;
+		uint8_t* src = flagRowInfo.data + spanMin;
 
 		uint8_t mask = 0;
-		for (col = spanBegin; col < spanEnd; ++col, ++dest, ++src) {
+		for (col = spanMin; col <= spanMax; ++col, ++dest, ++src) {
 
 			mask ^= *src;
 			*src = 0;
@@ -727,39 +725,12 @@ void fctx_close_path(FContext* fctx) {
 
 void fctx_draw_path(FContext* fctx, FPoint* points, uint32_t num_points) {
 
-	// allocate buffer for transformed points.
 	FPoint* tpoints = (FPoint*)malloc(num_points * sizeof(FPoint));
 	if (tpoints) {
-
-		// rotate and translate the points.
-		FPoint* src = points;
-		FPoint* end = src + num_points;
-		FPoint* dest = tpoints;
-		int32_t c = cos_lookup(fctx->transform_rotation);
-		int32_t s = sin_lookup(fctx->transform_rotation);
-		while (src != end) {
-			fixed_t x = src->x * fctx->transform_scale_to.x / fctx->transform_scale_from.x;
-			fixed_t y = src->y * fctx->transform_scale_to.y / fctx->transform_scale_from.y;
-			dest->x = (x * c / TRIG_MAX_RATIO) - (y * s / TRIG_MAX_RATIO);
-			dest->y = (x * s / TRIG_MAX_RATIO) + (y * c / TRIG_MAX_RATIO);
-			dest->x += fctx->transform_offset.x + fctx->subpixel_adjust;
-			dest->y += fctx->transform_offset.y + fctx->subpixel_adjust;
-
-			// grow a bounding box around the points visited.
-			if (dest->x < fctx->extent_min.x) fctx->extent_min.x = dest->x;
-			if (dest->y < fctx->extent_min.y) fctx->extent_min.y = dest->y;
-			if (dest->x > fctx->extent_max.x) fctx->extent_max.x = dest->x;
-			if (dest->y > fctx->extent_max.y) fctx->extent_max.y = dest->y;
-
-			++src;
-			++dest;
-		}
-
-		// rasterize the edges into the buffer
+        fctx_transform_points(fctx, num_points, points, tpoints, FPointZero);
 		for (uint32_t k = 0; k < num_points; ++k) {
 			fctx_plot_edge(fctx, tpoints+k, tpoints+((k+1) % num_points));
 		}
-
 		free(tpoints);
 	}
 
