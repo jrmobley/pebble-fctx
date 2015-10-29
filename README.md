@@ -2,7 +2,7 @@
 
 This is a graphics library for the Pebble smart watch.
 
-Provides subpixel accurate, anti-aliased rendering of filled shapes.  Supports circles, line segments and bezier segments, and SVG fonts.
+Provides subpixel accurate, anti-aliased rendering of filled shapes.  Supports circles, line segments and bezier segments, SVG paths, and SVG fonts.
 
 ### Notes and caveats
 
@@ -10,7 +10,17 @@ The library uses an even-odd fill rule.
 
 Only filled shapes are supported.  So, to create a line, you would need to draw a thin box.  And to draw a ring, you would plot a pair concentric circles.
 
-No clipping is performed.  Any attempt to draw outside the bounds of the graphics context will produce undefined results and probably crash.
+Clipping is supported for AA and BW rendering, *except* that it does not produce
+correct results in BW rendering mode on circular displays.
+
+### Mode selection (color platforms only)
+    void fctx_enable_aa(bool enable);
+    bool fpath_is_aa_enabled();
+
+By default, color platforms will use the anti-aliased (AA) rendering path, but
+the 1-bit (BW) rendering path is available as an option.  Make this selection *before*
+calling `fctx_init_context`.  Note that clipping does not work properly in BW mode
+with circular frame buffers.
 
 ### Initialization and cleanup
     void fctx_init_context(FContext* fctx, GContext* gctx);
@@ -53,13 +63,19 @@ Path (i.e. polygon) drawing respects the current transform state.  It draws an a
     void fctx_move_to(FContext* fctx, FPoint p);
     void fctx_line_to(FContext* fctx, FPoint p);
     void fctx_curve_to(FContext* fctx, FPoint cp0, FPoint cp1, FPoint p);
+    void fctx_close_path(FContext* fctx);
 
 The stateful draw commands respect the current transform state.  `fctx_curve_to` draws cubic spline (bezier) segments.  The shape is *not* automatically closed.
 
 ### Compiled SVG path drawing
+    FPath* fpath_create_from_resource(uint32_t resource_id);
+    void fpath_destroy(FPath* fpath);
     void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_t length);
 
-Although this function is public, there is currently no tool support for creating compiled path resources outside the context of SVG fonts.
+The `advance` parameter is an offset that is applied before the regular transform
+state is applied.
+Compiled path resources are built by the
+[fctx-compiler](https://github.com/jrmobley/pebble-fctx-compiler) tool.
 
 ### Text drawing
     void fctx_set_text_size(FContext* fctx, FFont* font, int16_t pixels);
