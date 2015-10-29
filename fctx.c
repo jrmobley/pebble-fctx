@@ -194,12 +194,10 @@ void fctx_init_context_bw(FContext* fctx, GContext* gctx) {
 
     GBitmap* frameBuffer = graphics_capture_frame_buffer(gctx);
     if (frameBuffer) {
-        GRect bounds = gbitmap_get_bounds(frameBuffer);
+        fctx->flag_bounds = gbitmap_get_bounds(frameBuffer);
         graphics_release_frame_buffer(gctx, frameBuffer);
 
-        bounds.size.w += 1;
-        bounds.size.h += 1;
-        fctx->flag_buffer = gbitmap_create_blank(bounds.size, GBitmapFormat1Bit);
+        fctx->flag_buffer = gbitmap_create_blank(fctx->flag_bounds.size, GBitmapFormat1Bit);
         CHECK(fctx->flag_buffer);
 
         fctx->gctx = gctx;
@@ -222,20 +220,44 @@ void fctx_plot_edge_bw(FContext* fctx, FPoint* a, FPoint* b) {
 
     uint8_t* data = gbitmap_get_data(fctx->flag_buffer);
     int16_t stride = gbitmap_get_bytes_per_row(fctx->flag_buffer);
-    int32_t height = edge.height;
-    while (height--) {
-        uint8_t* p = data + edge.y * stride + edge.x / 8;
-        uint8_t mask = 1 << (edge.x % 8);
-        *p ^= mask;
+    int16_t max_x = fctx->flag_bounds.size.w - 1;
+    int16_t max_y = fctx->flag_bounds.size.h - 1;
+
+    while (edge.height > 0 && edge.y < 0) {
+        edge_step(&edge);
+    }
+
+    while (edge.height > 0 && edge.y <= max_y) {
+        if (edge.x < 0) {
+            uint8_t* p = data + edge.y * stride;
+            uint8_t mask = 1;
+            *p ^= mask;
+        } else if (edge.x <= max_x) {
+            uint8_t* p = data + edge.y * stride + edge.x / 8;
+            uint8_t mask = 1 << (edge.x % 8);
+            *p ^= mask;
+        }
         edge_step(&edge);
     }
 
 }
 
-static inline void fctx_plot_point_bw(uint8_t* data, uint16_t stride, int16_t x, int16_t y) {
-    uint8_t* p = data + y * stride + x / 8;
-    uint8_t mask = 1 << (x % 8);
-    *p ^= mask;
+static inline void fctx_plot_point_bw(FContext* fctx, int16_t x, int16_t y) {
+    int16_t max_y = fctx->flag_bounds.size.h - 1;
+    if (y >= 0 && y < max_y) {
+        uint8_t* data = gbitmap_get_data(fctx->flag_buffer);
+        int16_t stride = gbitmap_get_bytes_per_row(fctx->flag_buffer);
+        int16_t max_x = fctx->flag_bounds.size.w - 1;
+        if (x < 0) {
+            uint8_t* p = data + y * stride;
+            uint8_t mask = 1;
+            *p ^= mask;
+        } else if (x <= max_x) {
+            uint8_t* p = data + y * stride + x / 8;
+            uint8_t mask = 1 << (x % 8);
+            *p ^= mask;
+        }
+    }
 }
 
 void fctx_plot_circle_bw(FContext* fctx, const FPoint* fc, fixed_t fr) {
@@ -250,18 +272,15 @@ void fctx_plot_circle_bw(FContext* fctx, const FPoint* fc, fixed_t fr) {
     int16_t cx = FIXED_TO_INT(fc->x);
     int16_t cy = FIXED_TO_INT(fc->y);
 
-    uint8_t* data = gbitmap_get_data(fctx->flag_buffer);
-    int16_t stride = gbitmap_get_bytes_per_row(fctx->flag_buffer);
-
     fixed_t x = r - 1;
     fixed_t y = 0;
     fixed_t E = 1 - 2*r;
     while (x >= y) {
 
-        fctx_plot_point_bw(data, stride, cx-x-1, cy+y);
-        fctx_plot_point_bw(data, stride, cx+x+1, cy+y);
-        fctx_plot_point_bw(data, stride, cx-x-1, cy-y-1);
-        fctx_plot_point_bw(data, stride, cx+x+1, cy-y-1);
+        fctx_plot_point_bw(fctx, cx-x-1, cy+y);
+        fctx_plot_point_bw(fctx, cx+x+1, cy+y);
+        fctx_plot_point_bw(fctx, cx-x-1, cy-y-1);
+        fctx_plot_point_bw(fctx, cx+x+1, cy-y-1);
 
         E += 4*y + 4;
         if (E > 0) {
@@ -275,10 +294,10 @@ void fctx_plot_circle_bw(FContext* fctx, const FPoint* fc, fixed_t fr) {
              * with the edge-flag algorithm, complete erases the span!
              */
             if (x != y) {
-                fctx_plot_point_bw(data, stride, cx-y-1, cy+x);
-                fctx_plot_point_bw(data, stride, cx+y+1, cy+x);
-                fctx_plot_point_bw(data, stride, cx-y-1, cy-x-1);
-                fctx_plot_point_bw(data, stride, cx+y+1, cy-x-1);
+                fctx_plot_point_bw(fctx, cx-y-1, cy+x);
+                fctx_plot_point_bw(fctx, cx+y+1, cy+x);
+                fctx_plot_point_bw(fctx, cx-y-1, cy-x-1);
+                fctx_plot_point_bw(fctx, cx+y+1, cy-x-1);
             }
 
             E += -4*x;
@@ -296,23 +315,26 @@ void fctx_end_fill_bw(FContext* fctx) {
     uint8_t color = gcolor_equal(fctx->fill_color, GColorWhite) ? 0xff : 0x00;
 #endif
 
-    uint16_t rowMin = FIXED_TO_INT(fctx->extent_min.y);
-    uint16_t rowMax = FIXED_TO_INT(fctx->extent_max.y);
-    uint16_t colMin = FIXED_TO_INT(fctx->extent_min.x);
-    uint16_t colMax = FIXED_TO_INT(fctx->extent_max.x);
+    int16_t rowMin = FIXED_TO_INT(fctx->extent_min.y);
+    int16_t rowMax = FIXED_TO_INT(fctx->extent_max.y);
+    int16_t colMin = FIXED_TO_INT(fctx->extent_min.x);
+    int16_t colMax = FIXED_TO_INT(fctx->extent_max.x);
+
+    if (rowMin < 0) rowMin = 0;
+    if (rowMax >= fctx->flag_bounds.size.h) rowMax = fctx->flag_bounds.size.h - 1;
 
     GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
 
     uint8_t* dest;
     uint8_t* src;
     uint8_t mask;
-    uint16_t col, row;
+    int16_t col, row;
 
     for (row = rowMin; row <= rowMax; ++row) {
         GBitmapDataRowInfo fbRowInfo = gbitmap_get_data_row_info(fb, row);
         GBitmapDataRowInfo flagRowInfo = gbitmap_get_data_row_info(fctx->flag_buffer, row);
-        uint16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
-        uint16_t spanMax = (fbRowInfo.max_x < colMax) ? fbRowInfo.max_x : colMax;
+        int16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
+        int16_t spanMax = (fbRowInfo.max_x < colMax) ? fbRowInfo.max_x : colMax;
 
         bool inside = false;
         for (col = spanMin; col <= spanMax; ++col) {
@@ -397,10 +419,10 @@ void fctx_init_context_aa(FContext* fctx, GContext* gctx) {
     GBitmap* frameBuffer = graphics_capture_frame_buffer(gctx);
     if (frameBuffer) {
         GBitmapFormat format = gbitmap_get_format(frameBuffer);
-        GRect bounds = gbitmap_get_bounds(frameBuffer);
+        fctx->flag_bounds = gbitmap_get_bounds(frameBuffer);
         graphics_release_frame_buffer(gctx, frameBuffer);
         fctx->gctx = gctx;
-        fctx->flag_buffer = gbitmap_create_blank(bounds.size, format);
+        fctx->flag_buffer = gbitmap_create_blank(fctx->flag_bounds.size, format);
         fctx->fill_color = GColorWhite;
         fctx->color_bias = 0;
         fctx->subpixel_adjust = -1;
@@ -424,14 +446,21 @@ void fctx_plot_edge_aa(FContext* fctx, FPoint* a, FPoint* b) {
         edge_init_aa(&edge, a, b);
     }
 
-    int32_t height = edge.height;
-    while (height--) {
+    while (edge.height > 0 && edge.y < 0) {
+        edge_step(&edge);
+    }
+
+    int32_t max_y = fctx->flag_bounds.size.h * SUBPIXEL_COUNT - 1;
+    while (edge.height > 0 && edge.y <= max_y) {
         int32_t ySub = edge.y & (SUBPIXEL_COUNT - 1);
         uint8_t mask = 1 << ySub;
         int32_t pixelX = (edge.x + k_sampling_offsets[ySub]) / SUBPIXEL_COUNT;
         int32_t pixelY = edge.y / SUBPIXEL_COUNT;
         GBitmapDataRowInfo row = gbitmap_get_data_row_info(fctx->flag_buffer, pixelY);
-        if (pixelX <= row.max_x) {
+        if (pixelX < row.min_x) {
+            uint8_t* p = row.data + row.min_x;
+            *p ^= mask;
+        } else if (pixelX <= row.max_x) {
             uint8_t* p = row.data + pixelX;
             *p ^= mask;
         }
@@ -439,16 +468,21 @@ void fctx_plot_edge_aa(FContext* fctx, FPoint* a, FPoint* b) {
     }
 }
 
-static inline void fctx_plot_point(GBitmap* bitmap, fixed_t x, fixed_t y) {
+static inline void fctx_plot_point_aa(FContext* fctx, fixed_t x, fixed_t y) {
     int32_t ySub = y & (SUBPIXEL_COUNT - 1);
     uint8_t mask = 1 << ySub;
     int32_t pixelX = (x + k_sampling_offsets[ySub]) / SUBPIXEL_COUNT;
     int32_t pixelY = y / SUBPIXEL_COUNT;
 
-    GBitmapDataRowInfo row = gbitmap_get_data_row_info(bitmap, pixelY);
-    if (pixelX <= row.max_x) {
-        uint8_t* p = row.data + pixelX;
-        *p ^= mask;
+    if (pixelY >= 0 && pixelY < fctx->flag_bounds.size.h) {
+        GBitmapDataRowInfo row = gbitmap_get_data_row_info(fctx->flag_buffer, pixelY);
+        if (pixelX < row.min_x) {
+            uint8_t* p = row.data + row.min_x;
+            *p ^= mask;
+        } else if (pixelX <= row.max_x) {
+            uint8_t* p = row.data + pixelX;
+            *p ^= mask;
+        }
     }
 }
 
@@ -472,10 +506,10 @@ void fctx_plot_circle_aa(FContext* fctx, const FPoint* c, fixed_t r) {
     fixed_t E = 1 - 2*r;
     while (m >= n) {
 
-        fctx_plot_point(fctx->flag_buffer, cx-m-1, cy+n);
-        fctx_plot_point(fctx->flag_buffer, cx+m+1, cy+n);
-        fctx_plot_point(fctx->flag_buffer, cx-m-1, cy-n-1);
-        fctx_plot_point(fctx->flag_buffer, cx+m+1, cy-n-1);
+        fctx_plot_point_aa(fctx, cx-m-1, cy+n);
+        fctx_plot_point_aa(fctx, cx+m+1, cy+n);
+        fctx_plot_point_aa(fctx, cx-m-1, cy-n-1);
+        fctx_plot_point_aa(fctx, cx+m+1, cy-n-1);
 
         E += 4*n + 4;
         if (E > 0) {
@@ -489,10 +523,10 @@ void fctx_plot_circle_aa(FContext* fctx, const FPoint* c, fixed_t r) {
              * with the edge-flag algorithm, complete erases the span!
              */
             if (m != n) {
-                fctx_plot_point(fctx->flag_buffer, cx-n-1, cy+m);
-                fctx_plot_point(fctx->flag_buffer, cx+n+1, cy+m);
-                fctx_plot_point(fctx->flag_buffer, cx-n-1, cy-m-1);
-                fctx_plot_point(fctx->flag_buffer, cx+n+1, cy-m-1);
+                fctx_plot_point_aa(fctx, cx-n-1, cy+m);
+                fctx_plot_point_aa(fctx, cx+n+1, cy+m);
+                fctx_plot_point_aa(fctx, cx-n-1, cy-m-1);
+                fctx_plot_point_aa(fctx, cx+n+1, cy-m-1);
             }
 
             E += -4*m;
@@ -519,14 +553,17 @@ static inline int8_t clamp8(int8_t val, int8_t min, int8_t max) {
 
 void fctx_end_fill_aa(FContext* fctx) {
 
-    uint16_t rowMin = FIXED_TO_INT(fctx->extent_min.y);
-    uint16_t rowMax = FIXED_TO_INT(fctx->extent_max.y);
-    uint16_t colMin = FIXED_TO_INT(fctx->extent_min.x);
-    uint16_t colMax = FIXED_TO_INT(fctx->extent_max.x);
+    int16_t rowMin = FIXED_TO_INT(fctx->extent_min.y);
+    int16_t rowMax = FIXED_TO_INT(fctx->extent_max.y);
+    int16_t colMin = FIXED_TO_INT(fctx->extent_min.x);
+    int16_t colMax = FIXED_TO_INT(fctx->extent_max.x);
+
+    if (rowMin < 0) rowMin = 0;
+    if (rowMax >= fctx->flag_bounds.size.h) rowMax = fctx->flag_bounds.size.h - 1;
 
     GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
 
-    uint16_t col, row;
+    int16_t col, row;
 
     GColor8 d;
     GColor8 s = fctx->fill_color;
@@ -534,8 +571,8 @@ void fctx_end_fill_aa(FContext* fctx) {
     for (row = rowMin; row <= rowMax; ++row) {
         GBitmapDataRowInfo fbRowInfo = gbitmap_get_data_row_info(fb, row);
         GBitmapDataRowInfo flagRowInfo = gbitmap_get_data_row_info(fctx->flag_buffer, row);
-        uint16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
-        uint16_t spanMax = (fbRowInfo.max_x < colMax) ? fbRowInfo.max_x : colMax;
+        int16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
+        int16_t spanMax = (fbRowInfo.max_x < colMax) ? fbRowInfo.max_x : colMax;
         uint8_t* dest = fbRowInfo.data + spanMin;
         uint8_t* src = flagRowInfo.data + spanMin;
 

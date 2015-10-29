@@ -63,6 +63,7 @@ typedef struct FRect {
 typedef struct FContext {
 	GContext* gctx;
 	GBitmap* flag_buffer;
+    GRect flag_bounds;
 	FPoint extent_min;
 	FPoint extent_max;
     FPoint path_init_point;
