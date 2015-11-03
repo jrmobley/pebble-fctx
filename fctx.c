@@ -358,6 +358,11 @@ void fctx_end_fill_bw(FContext* fctx) {
 #endif
             }
         }
+        if (col < flagRowInfo.max_x) {
+            src = flagRowInfo.data + col / 8;
+            mask = 1 << (col % 8);
+            *src &= ~mask;
+        }
     }
 
     graphics_release_frame_buffer(fctx->gctx, fb);
@@ -590,6 +595,7 @@ void fctx_end_fill_aa(FContext* fctx) {
                 *dest = d.argb;
             }
         }
+        if (col < flagRowInfo.max_x) *src = 0;
     }
 
     graphics_release_frame_buffer(fctx->gctx, fb);
