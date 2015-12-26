@@ -155,6 +155,12 @@ void fctx_set_scale(FContext* fctx, FPoint scale_from, FPoint scale_to) {
 
 void fctx_set_rotation(FContext* fctx, uint32_t rotation) {
     fctx->transform_rotation = rotation;
+    fctx->transform_rotation_offset = FPointZero;	
+}
+
+void fctx_set_rotation_with_offset(FContext* fctx, uint32_t rotation, FPoint offset) {
+    fctx->transform_rotation = rotation;
+    fctx->transform_rotation_offset = offset;	
 }
 
 // --------------------------------------------------------------------------
@@ -206,6 +212,7 @@ void fctx_init_context_bw(FContext* fctx, GContext* gctx) {
         fctx->transform_scale_from = FPointOne;
         fctx->transform_scale_to = FPointOne;
         fctx->transform_rotation = 0;
+	    fctx->transform_rotation_offset = FPointZero;
     }
 }
 
@@ -435,6 +442,7 @@ void fctx_init_context_aa(FContext* fctx, GContext* gctx) {
         fctx->transform_scale_from = FPointOne;
         fctx->transform_scale_to = FPointOne;
         fctx->transform_rotation = 0;
+        fctx->transform_rotation_offset = FPointZero;
     }
 }
 
@@ -724,13 +732,26 @@ void fctx_transform_points(FContext* fctx, uint16_t pcount, FPoint* ppoints, FPo
     FPoint* dst = tpoints;
     FPoint* end = dst + pcount;
     while (dst != end) {
+        // apply scale
         fixed_t x = (src->x + advance.x) * fctx->transform_scale_to.x / fctx->transform_scale_from.x;
         fixed_t y = (src->y + advance.y) * fctx->transform_scale_to.y / fctx->transform_scale_from.y;
-        dst->x = (x * c / TRIG_MAX_RATIO) - (y * s / TRIG_MAX_RATIO);
-        dst->y = (x * s / TRIG_MAX_RATIO) + (y * c / TRIG_MAX_RATIO);
-        dst->x += fctx->transform_offset.x + fctx->subpixel_adjust;
-        dst->y += fctx->transform_offset.y + fctx->subpixel_adjust;
 
+		// apply rotation offset
+		x -= fctx->transform_rotation_offset.x - fctx->subpixel_adjust;
+        y -= fctx->transform_rotation_offset.y - fctx->subpixel_adjust;
+			
+		// rotate
+		dst->x = (x * c / TRIG_MAX_RATIO) - (y * s / TRIG_MAX_RATIO);
+        dst->y = (x * s / TRIG_MAX_RATIO) + (y * c / TRIG_MAX_RATIO);
+
+		// undo rotation offset
+		dst->x += fctx->transform_rotation_offset.x + fctx->subpixel_adjust;
+        dst->y += fctx->transform_rotation_offset.y + fctx->subpixel_adjust;
+
+        // apply offset			
+		dst->x += fctx->transform_offset.x + fctx->subpixel_adjust;
+        dst->y += fctx->transform_offset.y + fctx->subpixel_adjust;
+			
         // grow a bounding box around the points visited.
         if (dst->x < fctx->extent_min.x) fctx->extent_min.x = dst->x;
         if (dst->y < fctx->extent_min.y) fctx->extent_min.y = dst->y;
