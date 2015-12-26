@@ -84,6 +84,7 @@ void fctx_set_color_bias(FContext* fctx, int16_t bias);
 void fctx_set_offset(FContext* fctx, FPoint offset);
 void fctx_set_scale(FContext* fctx, FPoint scale_from, FPoint scale_to);
 void fctx_set_rotation(FContext* fctx, uint32_t rotation);
+void fctx_set_rotation_with_offset(FContext* fctx, uint32_t rotation, FPoint offset);
 
 void fctx_transform_points(FContext* fctx, uint16_t pcount, FPoint* ppoints, FPoint* tpoints, FPoint advance);
 
