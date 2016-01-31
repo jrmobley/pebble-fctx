@@ -63,18 +63,19 @@ typedef struct FRect {
 typedef struct FContext {
 	GContext* gctx;
 	GBitmap* flag_buffer;
-    GRect flag_bounds;
+	GRect flag_bounds;
 	FPoint extent_min;
 	FPoint extent_max;
-    FPoint path_init_point;
-    FPoint path_cur_point;
-    FPoint transform_offset;
-    FPoint transform_scale_from;
+	FPoint path_init_point;
+	FPoint path_cur_point;
+	FPoint transform_offset;
+	FPoint transform_scale_from;
 	FPoint transform_scale_to;
-    fixed_t transform_rotation;
+	fixed_t transform_rotation;
+	FPoint transform_rotation_offset;	
 	fixed_t subpixel_adjust;
-
-    GColor fill_color;
+	
+	GColor fill_color;
 	int16_t color_bias;
 } FContext;
 
@@ -83,6 +84,7 @@ void fctx_set_color_bias(FContext* fctx, int16_t bias);
 void fctx_set_offset(FContext* fctx, FPoint offset);
 void fctx_set_scale(FContext* fctx, FPoint scale_from, FPoint scale_to);
 void fctx_set_rotation(FContext* fctx, uint32_t rotation);
+void fctx_set_rotation_with_offset(FContext* fctx, uint32_t rotation, FPoint offset);
 
 void fctx_transform_points(FContext* fctx, uint16_t pcount, FPoint* ppoints, FPoint* tpoints, FPoint advance);
 
