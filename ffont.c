@@ -12,6 +12,17 @@ FFont* ffont_create_from_resource(uint32_t resource_id) {
     return NULL;
 }
 
+
+FFont* ffont_create_from_resource_with_buffer(uint32_t resource_id, uint8_t* buffer){
+    ResHandle rh = resource_get_handle(resource_id);
+    size_t rs = resource_size(rh);
+    if (buffer) {
+        resource_load(rh, buffer, rs);
+        return (FFont*)buffer;
+    }
+    return NULL;    
+}
+
 FGlyphRange* ffont_glyph_index(FFont* font) {
     void* buffer = (void*)font;
     void* index = buffer + sizeof(FFont);

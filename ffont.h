@@ -22,6 +22,7 @@ typedef struct __attribute__((__packed__)) FGlyph {
 } FGlyph;
 
 FFont* ffont_create_from_resource(uint32_t resource_id);
+FFont* ffont_create_from_resource_with_buffer(uint32_t resource_id, uint8_t* buffer);
 void ffont_destroy(FFont* font);
 void ffont_debug_log(FFont* font, uint8_t log_level);
 FGlyph* ffont_glyph_info(FFont* font, uint16_t unicode);
