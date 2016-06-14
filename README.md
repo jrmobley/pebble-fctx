@@ -10,17 +10,13 @@ The library uses an even-odd fill rule.
 
 Only filled shapes are supported.  So, to create a line, you would need to draw a thin box.  And to draw a ring, you would plot a pair concentric circles.
 
-Clipping is supported for AA and BW rendering, *except* that it does not produce
-correct results in BW rendering mode on circular displays.
+Clipping is supported for AA and BW rendering, *except* that it does not produce correct results in BW rendering mode on circular displays.
 
 ### Mode selection (color platforms only)
     void fctx_enable_aa(bool enable);
-    bool fpath_is_aa_enabled();
+    bool fctx_is_aa_enabled();
 
-By default, color platforms will use the anti-aliased (AA) rendering path, but
-the 1-bit (BW) rendering path is available as an option.  Make this selection *before*
-calling `fctx_init_context`.  Note that clipping does not work properly in BW mode
-with circular frame buffers.
+By default, color platforms will use the anti-aliased (AA) rendering path, but the 1-bit (BW) rendering path is available as an option.  Make this selection *before* calling `fctx_init_context`.  Note that clipping does not work properly in BW mode with circular frame buffers.
 
 ### Initialization and cleanup
     void fctx_init_context(FContext* fctx, GContext* gctx);
@@ -72,10 +68,8 @@ The stateful draw commands respect the current transform state.  `fctx_curve_to`
     void fpath_destroy(FPath* fpath);
     void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_t length);
 
-The `advance` parameter is an offset that is applied before the regular transform
-state is applied.
-Compiled path resources are built by the
-[fctx-compiler](https://github.com/jrmobley/pebble-fctx-compiler) tool.
+The `advance` parameter is an offset that is applied before the regular transform state is applied.
+Compiled path resources are built by the [fctx-compiler](#resource-compiler) tool.
 
 ### Text drawing
     void fctx_set_text_size(FContext* fctx, FFont* font, int16_t pixels);
@@ -87,4 +81,24 @@ The `fctx_set_text_size` function is a convenience method that calls `fctx_set_s
     FFont* ffont_create_from_resource(uint32_t resource_id);
     void ffont_destroy(FFont* font);
 
-The font resources are built by the [fctx-compiler](https://github.com/jrmobley/pebble-fctx-compiler) tool.
+The font resources are built by the [fctx-compiler](#resource-compiler) tool.
+
+## Resource Compiler
+
+The `fctx-compiler` tool is provided for the compilation of SVG data files into a binary format for use with the pebble-fctx drawing library.
+
+    ./node_modules/.bin/fctx-compiler <svg file>
+
+Supports the extraction of SVG font definitions and individual paths.
+
+[FontForge](https://fontforge.github.io/en-US/) is recommended for preparing
+SVG fonts.
+
+A single SVG input file can generate multiple output files.  Each supported resource in the input is written as an output file into the resources directory.  Each output file is named with the id of the element from the input.
+
+For example, if the input file `resources.svg` contains, within the `<defs>` element, a `<font>` element with `id="digits"` and a `<path>` element `id="icon"`.
+Then the command
+
+    ./node_modules/.bin/fctx-compiler resources.svg`
+
+will output two files: `resources/digits.ffont` and `resources/icon.fpath`.

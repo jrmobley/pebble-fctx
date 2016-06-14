@@ -106,7 +106,7 @@ extern void fctx_deinit_context(FContext* fctx);
 
 #ifdef PBL_COLOR
 void fctx_enable_aa(bool enable);
-bool fpath_is_aa_enabled();
+bool fctx_is_aa_enabled();
 #endif
 
 // -----------------------------------------------------------------------------

@@ -622,7 +622,7 @@ void fctx_enable_aa(bool enable) {
     }
 }
 
-bool fpath_is_aa_enabled() {
+bool fctx_is_aa_enabled() {
     return fctx_init_context == &fctx_init_context_aa;
 }
 
@@ -640,7 +640,7 @@ fctx_end_fill_func       fctx_end_fill       = &fctx_end_fill_bw;
 // Transformed Drawing
 // --------------------------------------------------------------------------
 
-void bezier(FContext* fctx,
+static void bezier(FContext* fctx,
             fixed_t x1, fixed_t y1,
             fixed_t x2, fixed_t y2,
             fixed_t x3, fixed_t y3,
@@ -742,7 +742,7 @@ void fctx_transform_points(FContext* fctx, uint16_t pcount, FPoint* ppoints, FPo
     }
 }
 
-void exec_draw_func(FContext* fctx, FPoint advance, fctx_draw_cmd_func func, FPoint* ppoints, uint16_t pcount) {
+static void exec_draw_func(FContext* fctx, FPoint advance, fctx_draw_cmd_func func, FPoint* ppoints, uint16_t pcount) {
     FPoint tpoints[3];
     fctx_transform_points(fctx, pcount, ppoints, tpoints, advance);
     func(fctx, tpoints);
