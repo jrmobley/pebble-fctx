@@ -91,6 +91,7 @@ void fctx_line_to   (FContext* fctx, FPoint p);
 void fctx_curve_to  (FContext* fctx, FPoint cp0, FPoint cp1, FPoint p);
 void fctx_close_path(FContext* fctx);
 void fctx_draw_path (FContext* fctx, FPoint* points, uint32_t num_points);
+void fctx_draw_path_with_buffer(FContext* fctx, FPoint* points, FPoint* buffer, uint32_t num_points);
 
 typedef void (*fctx_init_context_func)(FContext* fctx, GContext* gctx);
 typedef void (*fctx_plot_edge_func)(FContext* fctx, FPoint* a, FPoint* b);

@@ -21,6 +21,7 @@ typedef struct __attribute__((__packed__)) FGlyph {
     fixed16_t horiz_adv_x;
 } FGlyph;
 
+FFont* ffont_load_from_resource_into_buffer(uint32_t resource_id, uint8_t* buffer);
 FFont* ffont_create_from_resource(uint32_t resource_id);
 void ffont_destroy(FFont* font);
 void ffont_debug_log(FFont* font, uint8_t log_level);

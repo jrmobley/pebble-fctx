@@ -1,24 +1,14 @@
 {
   "name": "pebble-fctx",
   "author": "JR Mobley",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jrmobley/pebble-fctx.git"
   },
-  "files": ["dist.zip", "tools/fctx-compiler.js"],
+  "files": ["dist.zip"],
   "keywords": ["pebble-package"],
-  "dependencies": {
-      "colors": "^1.1.0",
-      "minimist": "^1.2.0",
-      "svg-path-parser": "1.0.1",
-      "underscore": "^1.8.3",
-      "xml2js": "^0.4.9"
-  },
-  "bin": {
-      "fctx-compiler": "./tools/fctx-compiler.js"
-  },
   "pebble": {
     "projectType": "package",
     "sdkVersion": "3",

@@ -769,17 +769,21 @@ void fctx_close_path(FContext* fctx) {
     fctx->path_cur_point = fctx->path_init_point;
 }
 
+void fctx_draw_path_with_buffer(FContext* fctx, FPoint* points, FPoint* buffer, uint32_t num_points) {
+
+    fctx_transform_points(fctx, num_points, points, buffer, FPointZero);
+    for (uint32_t k = 0; k < num_points; ++k) {
+        fctx_plot_edge(fctx, buffer+k, buffer+((k+1) % num_points));
+    }
+}
+
 void fctx_draw_path(FContext* fctx, FPoint* points, uint32_t num_points) {
 
-    FPoint* tpoints = (FPoint*)malloc(num_points * sizeof(FPoint));
-    if (tpoints) {
-        fctx_transform_points(fctx, num_points, points, tpoints, FPointZero);
-        for (uint32_t k = 0; k < num_points; ++k) {
-            fctx_plot_edge(fctx, tpoints+k, tpoints+((k+1) % num_points));
-        }
-        free(tpoints);
+    FPoint* buffer = (FPoint*)malloc(num_points * sizeof(FPoint));
+    if (buffer) {
+        fctx_draw_path_with_buffer(fctx, points, buffer, num_points);
+        free(buffer);
     }
-
 }
 
 void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_t length) {
