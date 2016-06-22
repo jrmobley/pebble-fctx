@@ -894,7 +894,7 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
                 curpt = ppoints[2];
                 break;
             default:
-                APP_LOG(APP_LOG_LEVEL_ERROR, "invalid draw command \"%c\"", cmd->code);
+                APP_LOG(APP_LOG_LEVEL_ERROR, "invalid draw command %d", cmd->code);
                 return;
         }
 

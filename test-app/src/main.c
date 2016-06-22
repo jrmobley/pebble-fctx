@@ -8,8 +8,13 @@
 // Types and global variables.
 // --------------------------------------------------------------------------
 
+#define RESMEM 1
+
 Window* g_window;
 Layer* g_layer;
+#if RESMEM
+void* g_resource_memory;
+#endif
 FFont* g_font;
 FPath* g_body;
 FPath* g_hour;
@@ -136,12 +141,32 @@ void on_tick_timer(struct tm* tick_time, TimeUnits units_changed) {
 
 static void init() {
 
-    g_font = ffont_create_from_resource(RESOURCE_ID_NARROW_FFONT);
-    ffont_debug_log(g_font, APP_LOG_LEVEL_DEBUG);
+#if RESMEM
+    size_t font_size = resource_size(resource_get_handle(RESOURCE_ID_NARROW_FFONT));
+    size_t body_size = sizeof(FPath) + resource_size(resource_get_handle(RESOURCE_ID_BODY_FPATH));
+    size_t hour_size = sizeof(FPath) + resource_size(resource_get_handle(RESOURCE_ID_HOUR_FPATH));
+    size_t minute_size = sizeof(FPath) + resource_size(resource_get_handle(RESOURCE_ID_MINUTE_FPATH));
+    size_t resource_size = font_size + body_size + hour_size + minute_size;
+    void* g_resource_memory = malloc(resource_size);
+    void* resptr = g_resource_memory;
 
+    g_font = ffont_load_from_resource_into_buffer(RESOURCE_ID_NARROW_FFONT, resptr);
+    resptr += font_size;
+
+    g_body = fpath_load_from_resource_into_buffer(RESOURCE_ID_BODY_FPATH, resptr);
+    resptr += body_size;
+
+    g_hour = fpath_load_from_resource_into_buffer(RESOURCE_ID_HOUR_FPATH, resptr);
+    resptr += hour_size;
+
+    g_minute = fpath_load_from_resource_into_buffer(RESOURCE_ID_MINUTE_FPATH, resptr);
+    resptr += minute_size;
+#else
+    g_font = ffont_create_from_resource(RESOURCE_ID_NARROW_FFONT);
     g_body = fpath_create_from_resource(RESOURCE_ID_BODY_FPATH);
     g_hour = fpath_create_from_resource(RESOURCE_ID_HOUR_FPATH);
     g_minute = fpath_create_from_resource(RESOURCE_ID_MINUTE_FPATH);
+#endif
 
     g_window = window_create();
     window_set_background_color(g_window, GColorWhite);
@@ -163,10 +188,14 @@ static void deinit() {
     tick_timer_service_unsubscribe();
     window_destroy(g_window);
     layer_destroy(g_layer);
+#if RESMEM
+    free(g_resource_memory);
+#else
     fpath_destroy(g_minute);
     fpath_destroy(g_hour);
     fpath_destroy(g_body);
-	ffont_destroy(g_font);
+    ffont_destroy(g_font);
+#endif
 }
 
 // --------------------------------------------------------------------------
