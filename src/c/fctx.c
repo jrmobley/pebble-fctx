@@ -144,6 +144,10 @@ void fctx_set_color_bias(FContext* fctx, int16_t bias) {
     fctx->color_bias = bias;
 }
 
+void fctx_set_pivot(FContext* fctx, FPoint pivot) {
+    fctx->transform_pivot = pivot;
+}
+
 void fctx_set_offset(FContext* fctx, FPoint offset) {
     fctx->transform_offset = offset;
 }
@@ -202,6 +206,7 @@ void fctx_init_context_bw(FContext* fctx, GContext* gctx) {
 
         fctx->gctx = gctx;
         fctx->subpixel_adjust = -FIXED_POINT_SCALE / 2;
+        fctx->transform_pivot = FPointZero;
         fctx->transform_offset = FPointZero;
         fctx->transform_scale_from = FPointOne;
         fctx->transform_scale_to = FPointOne;
@@ -431,6 +436,7 @@ void fctx_init_context_aa(FContext* fctx, GContext* gctx) {
         fctx->fill_color = GColorWhite;
         fctx->color_bias = 0;
         fctx->subpixel_adjust = -1;
+        fctx->transform_pivot = FPointZero;
         fctx->transform_offset = FPointZero;
         fctx->transform_scale_from = FPointOne;
         fctx->transform_scale_to = FPointOne;
@@ -724,8 +730,8 @@ void fctx_transform_points(FContext* fctx, uint16_t pcount, FPoint* ppoints, FPo
     FPoint* dst = tpoints;
     FPoint* end = dst + pcount;
     while (dst != end) {
-        fixed_t x = (src->x + advance.x) * fctx->transform_scale_to.x / fctx->transform_scale_from.x;
-        fixed_t y = (src->y + advance.y) * fctx->transform_scale_to.y / fctx->transform_scale_from.y;
+        fixed_t x = (src->x - fctx->transform_pivot.x + advance.x) * fctx->transform_scale_to.x / fctx->transform_scale_from.x;
+        fixed_t y = (src->y - fctx->transform_pivot.y + advance.y) * fctx->transform_scale_to.y / fctx->transform_scale_from.y;
         dst->x = (x * c / TRIG_MAX_RATIO) - (y * s / TRIG_MAX_RATIO);
         dst->y = (x * s / TRIG_MAX_RATIO) + (y * c / TRIG_MAX_RATIO);
         dst->x += fctx->transform_offset.x + fctx->subpixel_adjust;

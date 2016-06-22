@@ -5,8 +5,23 @@
       "media": [
         {
           "type": "raw",
-          "name": "DIN_CONDENSED_FFONT",
-          "file": "din-condensed.ffont"
+          "name": "NARROW_FFONT",
+          "file": "archivo-narrow-regular.ffont"
+        },
+        {
+          "type": "raw",
+          "name": "BODY_FPATH",
+          "file": "body.fpath"
+        },
+        {
+          "type": "raw",
+          "name": "HOUR_FPATH",
+          "file": "hour.fpath"
+        },
+        {
+          "type": "raw",
+          "name": "MINUTE_FPATH",
+          "file": "minute.fpath"
         }
       ]
     },
@@ -35,7 +50,7 @@
       "pebble-fctx": "../"
   },
   "devDependencies": {
-      "pebble-fctx-compiler": "^1.0.0"
+    "pebble-fctx-compiler": "^1.0.0"
   },
   "keywords": [
     "pebble-app"

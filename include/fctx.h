@@ -68,6 +68,7 @@ typedef struct FContext {
 	FPoint extent_max;
     FPoint path_init_point;
     FPoint path_cur_point;
+    FPoint transform_pivot;
     FPoint transform_offset;
     FPoint transform_scale_from;
 	FPoint transform_scale_to;
@@ -80,6 +81,7 @@ typedef struct FContext {
 
 void fctx_set_fill_color(FContext* fctx, GColor c);
 void fctx_set_color_bias(FContext* fctx, int16_t bias);
+void fctx_set_pivot(FContext* fctx, FPoint pivot);
 void fctx_set_offset(FContext* fctx, FPoint offset);
 void fctx_set_scale(FContext* fctx, FPoint scale_from, FPoint scale_to);
 void fctx_set_rotation(FContext* fctx, uint32_t rotation);
