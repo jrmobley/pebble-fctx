@@ -38,12 +38,13 @@
     "targetPlatforms": [
       "aplite",
       "basalt",
-      "chalk"
+      "chalk",
+      "diorite"
     ],
     "capabilities": []
   },
   "name": "fctx-test",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "JR Mobley",
   "private": true,
   "dependencies": {

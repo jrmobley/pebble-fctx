@@ -43,34 +43,6 @@ bool checkObject(void* obj, const char* objname) {
 }
 
 // --------------------------------------------------------------------------
-// TEMPORARY polyfill until SDK 3.6 and the SDK3 Grand Unification.
-// The docs suggest, and experiment confirms, that [min_x..max_x] is an
-// inclusive range, i.e. the pixel at max_x is addressable and the width of
-// the range is (max_x - min_x + 1).
-// --------------------------------------------------------------------------
-
-#if !defined(PBL_IF_COLOR_ELSE) || defined(PBL_SDK_2)
-
-typedef struct GBitmapDataRowInfo {
-    uint8_t* data;
-    int16_t min_x;
-    int16_t max_x;
-} GBitmapDataRowInfo;
-
-static inline GBitmapDataRowInfo gbitmap_get_data_row_info(const GBitmap* bitmap, uint16_t y) {
-    uint8_t* data = gbitmap_get_data(bitmap);
-    uint16_t stride = gbitmap_get_bytes_per_row(bitmap);
-    GRect bounds = gbitmap_get_bounds(bitmap);
-    GBitmapDataRowInfo info;
-    info.data = data + stride * y;
-    info.min_x = bounds.origin.x;
-    info.max_x = bounds.origin.x + bounds.size.w - 1;
-    return info;
-}
-
-#endif
-
-// --------------------------------------------------------------------------
 // Drawing support that is shared between BW and AA.
 // --------------------------------------------------------------------------
 
