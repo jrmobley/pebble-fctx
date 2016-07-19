@@ -2,15 +2,39 @@
 
 This is a graphics library for the Pebble smart watch.
 
-Provides subpixel accurate, anti-aliased rendering of filled shapes.  Supports circles, line segments and bezier segments, SVG paths, and SVG fonts.
+Provides sub-pixel accurate, anti-aliased rendering of filled shapes.  Supports circles, line segments and bezier segments, SVG paths, and SVG fonts.
 
 ### Notes and caveats
 
 The library uses an even-odd fill rule.
 
-Only filled shapes are supported.  So, to create a line, you would need to draw a thin box.  And to draw a ring, you would plot a pair concentric circles.
+Only filled shapes are supported.  So, to create a line, you would need to draw a thin box.  And to draw a ring, you would plot a pair of concentric circles.
+[TODO: include some code snippet examples of typical drawing operations.]
 
 Clipping is supported for AA and BW rendering, *except* that it does not produce correct results in BW rendering mode on circular displays.
+
+### Memory
+
+[TODO: include an analysis of memory requirements.]
+
+### Coordinates
+
+    typedef int32_t fixed_t;
+
+    typedef struct FPoint {
+        fixed_t x;
+        fixed_t y;
+    } FPoint;
+
+    #define FIXED_POINT_SCALE 16
+    #define INT_TO_FIXED(a) ((a) * FIXED_POINT_SCALE)
+    #define FIXED_TO_INT(a) ((a) / FIXED_POINT_SCALE)
+    #define FIXED_MULTIPLY(a, b) (((a) * (b)) / FIXED_POINT_SCALE)
+
+    #define FPoint(x, y) ((FPoint){(x), (y)})
+    #define FPointI(x, y) ((FPoint){INT_TO_FIXED(x), INT_TO_FIXED(y)})
+
+The library works with fixed point coordinates with a scale factor of 16.  This means that `FPoint`s can address sub-pixels of 1/16th of a screen pixel.  The above declarations are just a subset of the available types, macros and functions.  Please see [`fctx.h`](include/fctx.h) for more.
 
 ### Mode selection (color platforms only)
     void fctx_enable_aa(bool enable);
@@ -22,7 +46,7 @@ By default, color platforms will use the anti-aliased (AA) rendering path, but t
     void fctx_init_context(FContext* fctx, GContext* gctx);
     void fctx_deinit_context(FContext* fctx);
 
-Initialize an FContext for rendering by providing a GContext to render to.  An internal buffer will be allocated of the same dimensions as the GContext.  This buffer will be one byte per pixel on basalt with anti-aliasing enabled.  On aplite, or with anti-aliasing disabled, the buffer will be just one bit per pixel.
+Initialize an FContext for rendering by providing a GContext to render to.  An internal buffer will be allocated of the same dimensions as the GContext.  This buffer will be one byte per pixel on color devices with anti-aliasing enabled.  On monochrome devices, or with anti-aliasing disabled, the buffer will be just one bit per pixel.
 Deinitialize the FContext when drawing is complete.
 
 ### Drawing procedure
