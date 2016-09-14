@@ -92,22 +92,25 @@ void on_layer_update(Layer* layer, GContext* ctx) {
     fctx_set_pivot(&fctx, FPointI(90, 90));
     fctx_set_offset(&fctx, center);
 
-    /* Draw the body. */
+    /* Draw the hour hand. */
     fctx_begin_fill(&fctx);
-    fctx_set_rotation(&fctx, 0);
-    fctx_draw_commands(&fctx, FPointZero, g_body->data, g_body->size);
+    fctx_set_fill_color(&fctx, GColorDarkGray);
+    fctx_set_rotation(&fctx, hour_angle);
+    fctx_draw_commands(&fctx, FPointZero, g_hour->data, g_hour->size);
     fctx_end_fill(&fctx);
 
     /* Draw the minute hand. */
     fctx_begin_fill(&fctx);
+    fctx_set_fill_color(&fctx, GColorBlack);
     fctx_set_rotation(&fctx, minute_angle);
     fctx_draw_commands(&fctx, FPointZero, g_minute->data, g_minute->size);
     fctx_end_fill(&fctx);
 
-    /* Draw the hour hand. */
+    /* Draw the body. */
     fctx_begin_fill(&fctx);
-    fctx_set_rotation(&fctx, hour_angle);
-    fctx_draw_commands(&fctx, FPointZero, g_hour->data, g_hour->size);
+    fctx_set_fill_color(&fctx, GColorBlack);
+    fctx_set_rotation(&fctx, 0);
+    fctx_draw_commands(&fctx, FPointZero, g_body->data, g_body->size);
     fctx_end_fill(&fctx);
 
     /* Draw the date. */

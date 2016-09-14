@@ -286,10 +286,19 @@ void fctx_plot_circle_bw(FContext* fctx, const FPoint* fc, fixed_t fr) {
 
 void fctx_end_fill_bw(FContext* fctx) {
 
+    uint8_t color;
 #ifdef PBL_COLOR
-    uint8_t color = fctx->fill_color.argb;
+    color = fctx->fill_color.argb;
 #else
-    uint8_t color = gcolor_equal(fctx->fill_color, GColorWhite) ? 0xff : 0x00;
+    uint8_t gray = 0;
+    if (gcolor_equal(fctx->fill_color, GColorWhite)) {
+        color = 0xff;
+    } else if (gcolor_equal(fctx->fill_color, GColorBlack)) {
+        color = 0x00;
+    } else {
+        gray = 0b01010101;
+        color = gray;
+    }
 #endif
 
     int16_t rowMin = FIXED_TO_INT(fctx->extent_min.y);
@@ -308,6 +317,15 @@ void fctx_end_fill_bw(FContext* fctx) {
     int16_t col, row;
 
     for (row = rowMin; row <= rowMax; ++row) {
+#ifdef PBL_BW
+        if (gray) {
+            if (row & 1) {
+                color = gray;
+            } else {
+                color = ~gray;
+            }
+        }
+#endif
         GBitmapDataRowInfo fbRowInfo = gbitmap_get_data_row_info(fb, row);
         GBitmapDataRowInfo flagRowInfo = gbitmap_get_data_row_info(fctx->flag_buffer, row);
         int16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
