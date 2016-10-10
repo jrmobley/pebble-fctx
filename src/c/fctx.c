@@ -2,6 +2,7 @@
 #include "fctx.h"
 #include "ffont.h"
 #include <stdlib.h>
+#include <pebble-utf8/pebble-utf8.h>
 
 /*
  * Credit where credit is due:
@@ -901,8 +902,15 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 // Text
 // --------------------------------------------------------------------------
 
-void fctx_set_text_size(FContext* fctx, FFont* font, int16_t pixels) {
+void fctx_set_text_em_height(FContext* fctx, FFont* font, int16_t pixels) {
     fctx->transform_scale_from.x = FIXED_TO_INT(font->units_per_em);
+    fctx->transform_scale_from.y = -fctx->transform_scale_from.x;
+    fctx->transform_scale_to.x = pixels;
+    fctx->transform_scale_to.y = pixels;
+}
+
+void fctx_set_text_cap_height(FContext* fctx, FFont* font, int16_t pixels) {
+    fctx->transform_scale_from.x = FIXED_TO_INT(font->cap_height);
     fctx->transform_scale_from.y = -fctx->transform_scale_from.x;
     fctx->transform_scale_to.x = pixels;
     fctx->transform_scale_to.y = pixels;
@@ -919,7 +927,7 @@ void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignm
         fixed_t width = 0;
         decode_state = 0;
         for (p = text; *p; ++p) {
-            if (0 == decode_utf8_byte(*p, &decode_state, &code_point)) {
+            if (0 == utf8_decode_byte(*p, &decode_state, &code_point)) {
                 FGlyph* glyph = ffont_glyph_info(font, *p);
                 if (glyph) {
                     width += glyph->horiz_adv_x;
@@ -933,19 +941,23 @@ void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignm
         }
     }
 
-    if (anchor == FTextAnchorBaseline) {
-        advance.y = 0;
+    if (anchor == FTextAnchorBottom) {
+        advance.y = -font->descent;
     } else if (anchor == FTextAnchorMiddle) {
         advance.y = -font->ascent / 2;
+    } else if (anchor == FTextAnchorCapMiddle) {
+        advance.y = -font->cap_height / 2;
     } else if (anchor == FTextAnchorTop) {
         advance.y = -font->ascent;
-    } else /* anchor == FTextAnchorBottom */ {
-        advance.y = -font->descent;
+    } else if (anchor == FTextAnchorCapTop) {
+        advance.y = -font->cap_height;
+    } else /* anchor == FTextAnchorBaseline) */ {
+        advance.y = 0;
     }
 
     decode_state = 0;
     for (p = text; *p; ++p) {
-        if (0 == decode_utf8_byte(*p, &decode_state, &code_point)) {
+        if (0 == utf8_decode_byte(*p, &decode_state, &code_point)) {
             FGlyph* glyph = ffont_glyph_info(font, code_point);
             if (glyph) {
                 void* path_data = ffont_glyph_outline(font, glyph);

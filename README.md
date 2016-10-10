@@ -4,6 +4,15 @@ This is a graphics library for the Pebble smart watch.
 
 Provides sub-pixel accurate, anti-aliased rendering of filled shapes.  Supports circles, line segments and bezier segments, SVG paths, and SVG fonts.
 
+### Release notes
+
+##### v1.6
+* Renamed `fctx_set_text_size` to `fctx_set_text_em_height` and added `fctx_set_text_cap_height`.
+* Added `FTextAnchorCapMiddle` and `FTextAnchorCapTop` for aligning text relative to the font cap-height.
+* Requires [pebble-fctx-compiler]() v1.2 font resources (for the cap-height metadata).
+* The previously undocumented `decode_utf8_byte` function has been moved into a new [pebble-utf8](https://www.npmjs.com/package/pebble-utf8) package.
+* Improvements to this README.
+
 ### Notes and caveats
 
 The library uses an even-odd fill rule.
@@ -62,11 +71,14 @@ To draw a filled shape, call `fctx_begin_fill` then call any number of plotting 
 The current color and bias are applied when `fctx_end_fill` is called.  The bias value is applied as an adjustment to the 'pixel coverage' value in the anti-aliasing calculations.  Meaningful values are -8 to +8, though positive values are not really useful in practice.  Negative values are effectively an opacity setting.  -8 would be completely transparent.
 
 ### Transform
-    void fctx_set_offset(FContext* fctx, FPoint offset);
+    void fctx_set_pivot(FContext* fctx, FPoint pivot);
     void fctx_set_scale(FContext* fctx, FPoint scale_from, FPoint scale_to);
     void fctx_set_rotation(FContext* fctx, uint32_t rotation);
+    void fctx_set_offset(FContext* fctx, FPoint offset);
 
-The current transform state is applied at the time a `draw` function is called.  Transform components are applied in the following order:  scale, rotate, then offset.
+The current transform state is applied at the time a `draw` function is called.  Transform components are applied in the following order:  pivot, scale, rotation, then offset.
+
+The pivot point is distinct from the offset in that it is subtracted from the incoming points (whereas the offset is added) and it is applied before the other transformations (whereas offset is applied last).  Setting the pivot point effectively redefines the zero point of the shapes that are drawn.
 
 ### Primitive plotting
     void fctx_plot_edge(FContext* fctx, FPoint* a, FPoint* b);
@@ -88,6 +100,7 @@ Path (i.e. polygon) drawing respects the current transform state.  It draws an a
 The stateful draw commands respect the current transform state.  `fctx_curve_to` draws cubic spline (bezier) segments.  The shape is *not* automatically closed.
 
 ### Compiled SVG path drawing
+    FPath* fpath_load_from_resource_into_buffer(uint32_t resource_id, void* buffer);
     FPath* fpath_create_from_resource(uint32_t resource_id);
     void fpath_destroy(FPath* fpath);
     void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_t length);
@@ -96,12 +109,14 @@ The `advance` parameter is an offset that is applied before the regular transfor
 Compiled path resources are built by the [fctx-compiler](#resource-compiler) tool.
 
 ### Text drawing
-    void fctx_set_text_size(FContext* fctx, FFont* font, int16_t pixels);
+    void fctx_set_text_em_height(FContext* fctx, FFont* font, int16_t pixels);
+    void fctx_set_text_cap_height(FContext* fctx, FFont* font, int16_t pixels);
     void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignment alignment, FTextAnchor anchor);
 
-The `fctx_set_text_size` function is a convenience method that calls `fctx_set_scale` with values to achieve a specific text size (in pixels).
+The `fctx_set_text_em_height` function is a convenience method that calls `fctx_set_scale` with values to achieve a specific text em-height size (in pixels).  Similarly, the `fctx_set_text_cap_height` function achieves a specific cap-height.
 
 ### Fonts
+    FFont* ffont_load_from_resource_into_buffer(uint32_t resource_id, void* buffer);
     FFont* ffont_create_from_resource(uint32_t resource_id);
     void ffont_destroy(FFont* font);
 

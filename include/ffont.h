@@ -6,6 +6,7 @@ typedef struct __attribute__((__packed__)) FFont {
     fixed16_t units_per_em;
     fixed16_t ascent;
     fixed16_t descent;
+    fixed16_t cap_height;
     uint16_t glyph_index_length;
     uint16_t glyph_table_length;
 } FFont;
@@ -27,5 +28,3 @@ void ffont_destroy(FFont* font);
 void ffont_debug_log(FFont* font, uint8_t log_level);
 FGlyph* ffont_glyph_info(FFont* font, uint16_t unicode);
 void* ffont_glyph_outline(FFont* font, FGlyph* glyph);
-
-uint16_t decode_utf8_byte(uint8_t byte, uint16_t* state, uint16_t* cp);

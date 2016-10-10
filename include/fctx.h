@@ -130,10 +130,13 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 
 typedef enum {
 	FTextAnchorBaseline = 0,
+    FTextAnchorCapMiddle,
 	FTextAnchorMiddle,
 	FTextAnchorTop,
+    FTextAnchorCapTop,
 	FTextAnchorBottom
 } FTextAnchor;
 
-void fctx_set_text_size(FContext* fctx, FFont* font, int16_t pixels);
+void fctx_set_text_em_height(FContext* fctx, FFont* font, int16_t pixels);
+void fctx_set_text_cap_height(FContext* fctx, FFont* font, int16_t pixels);
 void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignment alignment, FTextAnchor anchor);
