@@ -39,19 +39,20 @@
       "aplite",
       "basalt",
       "chalk",
-      "diorite"
+      "diorite",
+      "emery"
     ],
     "capabilities": []
   },
   "name": "fctx-test",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "JR Mobley",
   "private": true,
   "dependencies": {
       "pebble-fctx": "../"
   },
   "devDependencies": {
-    "pebble-fctx-compiler": "^1.0.0"
+    "pebble-fctx-compiler": "^1.2.0"
   },
   "keywords": [
     "pebble-app"

@@ -118,7 +118,7 @@ void on_layer_update(Layer* layer, GContext* ctx) {
     date_pos.x = center.x + INT_TO_FIXED( 5) * to_size / from_size;
     date_pos.y = center.y + INT_TO_FIXED(48) * to_size / from_size;
     fctx_begin_fill(&fctx);
-    fctx_set_text_size(&fctx, g_font, 30 * to_size / from_size);
+    fctx_set_text_em_height(&fctx, g_font, 30 * to_size / from_size);
     fctx_set_fill_color(&fctx, GColorWhite);
     fctx_set_pivot(&fctx, FPointZero);
     fctx_set_offset(&fctx, date_pos);
