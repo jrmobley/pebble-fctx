@@ -916,6 +916,21 @@ void fctx_set_text_cap_height(FContext* fctx, FFont* font, int16_t pixels) {
     fctx->transform_scale_to.y = pixels;
 }
 
+fixed_t fctx_string_width(FContext* fctx, const char* text, FFont* font) {
+    uint16_t code_point;
+    uint16_t decode_state = 0;
+    fixed_t width = 0;
+    for (const char* p = text; *p; ++p) {
+        if (0 == utf8_decode_byte(*p, &decode_state, &code_point)) {
+            FGlyph* glyph = ffont_glyph_info(font, code_point);
+            if (glyph) {
+                width += glyph->horiz_adv_x;
+            }
+        }
+    }
+    return width * fctx->transform_scale_to.x / fctx->transform_scale_from.x;
+}
+
 void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignment alignment, FTextAnchor anchor) {
 
     FPoint advance = {0, 0};
@@ -928,7 +943,7 @@ void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignm
         decode_state = 0;
         for (p = text; *p; ++p) {
             if (0 == utf8_decode_byte(*p, &decode_state, &code_point)) {
-                FGlyph* glyph = ffont_glyph_info(font, *p);
+                FGlyph* glyph = ffont_glyph_info(font, code_point);
                 if (glyph) {
                     width += glyph->horiz_adv_x;
                 }

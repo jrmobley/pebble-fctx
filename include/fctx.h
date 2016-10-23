@@ -139,4 +139,5 @@ typedef enum {
 
 void fctx_set_text_em_height(FContext* fctx, FFont* font, int16_t pixels);
 void fctx_set_text_cap_height(FContext* fctx, FFont* font, int16_t pixels);
+fixed_t fctx_string_width(FContext* fctx, const char* text, FFont* font);
 void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignment alignment, FTextAnchor anchor);

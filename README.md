@@ -6,6 +6,13 @@ Provides sub-pixel accurate, anti-aliased rendering of filled shapes.  Supports 
 
 ### Release notes
 
+##### v1.6.2
+* Added `fctx_string_width` function.
+* Fixed bug in the string width calculation in `fctx_draw_string`.
+
+##### v1.6.1
+* Emery platform support.
+
 ##### v1.6
 * Renamed `fctx_set_text_size` to `fctx_set_text_em_height` and added `fctx_set_text_cap_height`.
 * Added `FTextAnchorCapMiddle` and `FTextAnchorCapTop` for aligning text relative to the font cap-height.
@@ -111,6 +118,7 @@ Compiled path resources are built by the [fctx-compiler](#resource-compiler) too
 ### Text drawing
     void fctx_set_text_em_height(FContext* fctx, FFont* font, int16_t pixels);
     void fctx_set_text_cap_height(FContext* fctx, FFont* font, int16_t pixels);
+    fixed_t fctx_string_width(FContext* fctx, const char* text, FFont* font);
     void fctx_draw_string(FContext* fctx, const char* text, FFont* font, GTextAlignment alignment, FTextAnchor anchor);
 
 The `fctx_set_text_em_height` function is a convenience method that calls `fctx_set_scale` with values to achieve a specific text em-height size (in pixels).  Similarly, the `fctx_set_text_cap_height` function achieves a specific cap-height.

@@ -52,7 +52,7 @@
       "pebble-fctx": "../"
   },
   "devDependencies": {
-    "pebble-fctx-compiler": "^1.2.0"
+    "pebble-fctx-compiler": "^1.2.1"
   },
   "keywords": [
     "pebble-app"
