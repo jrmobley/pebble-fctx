@@ -35,6 +35,9 @@
 
 #define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
 
+// Angle below which we're not going to process with recursion
+#define MAX_ANGLE_TOLERANCE ((TRIG_MAX_ANGLE / 360) * 5)
+
 bool checkObject(void* obj, const char* objname) {
     if (!obj) {
         APP_LOG(APP_LOG_LEVEL_ERROR, "NULL %s", objname);
@@ -642,46 +645,52 @@ static void bezier(FContext* fctx,
             fixed_t x2, fixed_t y2,
             fixed_t x3, fixed_t y3,
             fixed_t x4, fixed_t y4) {
+    fixed_t x12, y12;
+    fixed_t x34, y34;
+    fixed_t x123, y123;
+    fixed_t x234, y234;
+    fixed_t x1234, y1234;
 
-    // Angle below which we're not going to process with recursion
-    static const int32_t max_angle_tolerance = (TRIG_MAX_ANGLE / 360) * 5;
+    {
+        fixed_t x23, y23;
 
-    // Calculate all the mid-points of the line segments
-    fixed_t x12   = (x1 + x2) / 2;
-    fixed_t y12   = (y1 + y2) / 2;
-    fixed_t x23   = (x2 + x3) / 2;
-    fixed_t y23   = (y2 + y3) / 2;
-    fixed_t x34   = (x3 + x4) / 2;
-    fixed_t y34   = (y3 + y4) / 2;
-    fixed_t x123  = (x12 + x23) / 2;
-    fixed_t y123  = (y12 + y23) / 2;
-    fixed_t x234  = (x23 + x34) / 2;
-    fixed_t y234  = (y23 + y34) / 2;
-    fixed_t x1234 = (x123 + x234) / 2;
-    fixed_t y1234 = (y123 + y234) / 2;
+        // Calculate all the mid-points of the line segments
+        x12   = (x1 + x2) / 2;
+        y12   = (y1 + y2) / 2;
+        x23   = (x2 + x3) / 2;
+        y23   = (y2 + y3) / 2;
+        x34   = (x3 + x4) / 2;
+        y34   = (y3 + y4) / 2;
+        x123  = (x12 + x23) / 2;
+        y123  = (y12 + y23) / 2;
+        x234  = (x23 + x34) / 2;
+        y234  = (y23 + y34) / 2;
+        x1234 = (x123 + x234) / 2;
+        y1234 = (y123 + y234) / 2;
 
-    // Angle Condition
-    int32_t a23 = atan2_lookup((int16_t)((y3 - y2) / FIXED_POINT_SCALE),
-                               (int16_t)((x3 - x2) / FIXED_POINT_SCALE));
-    int32_t da1 = abs(a23 - atan2_lookup((int16_t)((y2 - y1) / FIXED_POINT_SCALE),
-                                         (int16_t)((x2 - x1) / FIXED_POINT_SCALE)));
-    int32_t da2 = abs(atan2_lookup((int16_t)((y4 - y3) / FIXED_POINT_SCALE),
-                                   (int16_t)((x4 - x3) / FIXED_POINT_SCALE)) - a23);
+        // Angle Condition
+        int32_t a23 = atan2_lookup((int16_t)((y3 - y2) / FIXED_POINT_SCALE),
+                                   (int16_t)((x3 - x2) / FIXED_POINT_SCALE));
+        int32_t da1 = abs(a23 - atan2_lookup((int16_t)((y2 - y1) / FIXED_POINT_SCALE),
+                                             (int16_t)((x2 - x1) / FIXED_POINT_SCALE)));
+        int32_t da2 = abs(atan2_lookup((int16_t)((y4 - y3) / FIXED_POINT_SCALE),
+                                       (int16_t)((x4 - x3) / FIXED_POINT_SCALE)) - a23);
 
-    if (da1 >= TRIG_MAX_ANGLE) {
-        da1 = TRIG_MAX_ANGLE - da1;
-    }
+        if (da1 >= TRIG_MAX_ANGLE) {
+            da1 = TRIG_MAX_ANGLE - da1;
+        }
 
-    if (da2 >= TRIG_MAX_ANGLE) {
-        da2 = TRIG_MAX_ANGLE - da2;
-    }
+        if (da2 >= TRIG_MAX_ANGLE) {
+            da2 = TRIG_MAX_ANGLE - da2;
+        }
 
-    if (da1 + da2 < max_angle_tolerance) {
-        // Finally we can stop the recursion
-        FPoint a = {x1, y1};
-        FPoint b = {x4, y4};
-        fctx_plot_edge(fctx, &a, &b);
-        return;
+        if (da1 + da2 < MAX_ANGLE_TOLERANCE) {
+            // Finally we can stop the recursion
+            FPoint a = {x1, y1};
+            FPoint b = {x4, y4};
+            fctx_plot_edge(fctx, &a, &b);
+            return;
+        }
     }
 
     // Continue subdivision if points are being added successfully
