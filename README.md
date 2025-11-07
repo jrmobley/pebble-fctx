@@ -6,6 +6,9 @@ Provides sub-pixel accurate, anti-aliased rendering of filled shapes.  Supports 
 
 ### Release notes
 
+##### v1.6.3
+* Flint platform support.
+
 ##### v1.6.2
 * Added `fctx_string_width` function.
 * Fixed bug in the string width calculation in `fctx_draw_string`.

@@ -1,7 +1,7 @@
 {
   "name": "pebble-fctx",
   "author": "JR Mobley",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
     "pebble-package"
   ],
   "dependencies": {
-    "pebble-utf8": "^1.0.1"
+    "pebble-utf8": "^1.0.3"
   },
   "pebble": {
     "projectType": "package",
@@ -24,7 +24,8 @@
       "basalt",
       "chalk",
       "diorite",
-      "emery"
+      "emery",
+      "flint"
     ],
     "resources": {
       "media": []
