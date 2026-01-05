@@ -6,6 +6,9 @@ Provides sub-pixel accurate, anti-aliased rendering of filled shapes.  Supports 
 
 ### Release notes
 
+##### v1.6.4
+* Fixed clipping bug in BW mode on circular displays.
+
 ##### v1.6.3
 * Flint platform support.
 
@@ -30,7 +33,7 @@ The library uses an even-odd fill rule.
 Only filled shapes are supported.  So, to create a line, you would need to draw a thin box.  And to draw a ring, you would plot a pair of concentric circles.
 [TODO: include some code snippet examples of typical drawing operations.]
 
-Clipping is supported for AA and BW rendering, *except* that it does not produce correct results in BW rendering mode on circular displays.
+Clipping is supported for AA and BW rendering.
 
 ### Memory
 

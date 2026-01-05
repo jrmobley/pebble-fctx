@@ -309,6 +309,8 @@ void fctx_end_fill_bw(FContext* fctx) {
 
     if (rowMin < 0) rowMin = 0;
     if (rowMax >= fctx->flag_bounds.size.h) rowMax = fctx->flag_bounds.size.h - 1;
+    if (colMin < 0) colMin = 0;
+    if (colMax >= fctx->flag_bounds.size.w) colMax = fctx->flag_bounds.size.w - 1;
 
     GBitmap* fb = graphics_capture_frame_buffer(fctx->gctx);
 
@@ -329,11 +331,12 @@ void fctx_end_fill_bw(FContext* fctx) {
 #endif
         GBitmapDataRowInfo fbRowInfo = gbitmap_get_data_row_info(fb, row);
         GBitmapDataRowInfo flagRowInfo = gbitmap_get_data_row_info(fctx->flag_buffer, row);
+#if defined(PBL_ROUND)
         int16_t spanMin = (fbRowInfo.min_x > colMin) ? fbRowInfo.min_x : colMin;
         int16_t spanMax = (fbRowInfo.max_x < colMax) ? fbRowInfo.max_x : colMax;
-
+#endif
         bool inside = false;
-        for (col = spanMin; col <= spanMax; ++col) {
+        for (col = colMin; col <= colMax; ++col) {
 
 #ifdef PBL_COLOR
             dest = fbRowInfo.data + col;
@@ -347,7 +350,11 @@ void fctx_end_fill_bw(FContext* fctx) {
             }
             *src &= ~mask;
             if (inside) {
-#ifdef PBL_COLOR
+#if defined(PBL_ROUND)
+                if (col >= spanMin && col <= spanMax) {
+                    *dest = color;
+                }
+#elif defined(PBL_COLOR)
                 *dest = color;
 #else
                 *dest = (color & mask) | (*dest & ~mask);
