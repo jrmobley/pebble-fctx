@@ -804,7 +804,7 @@ void fctx_draw_commands(FContext* fctx, FPoint advance, void* path_data, uint16_
 
         /* choose the draw function and parameter count. */
         FPathDrawCommand* cmd = (FPathDrawCommand*)path_data;
-        fixed16_t* param = (fixed16_t*)&cmd->params;
+        fixed16_t* param = cmd->params;
         switch (cmd->code) {
             case 'M': // "moveto"
                 func = fctx_move_to_func;

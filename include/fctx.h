@@ -117,7 +117,7 @@ bool fctx_is_aa_enabled();
 // -----------------------------------------------------------------------------
 
 typedef int16_t fixed16_t;
-typedef struct __attribute__((__packed__)) FPathDrawCommand {
+typedef struct {
 	uint16_t code;
 	fixed16_t params[];
 } FPathDrawCommand;
