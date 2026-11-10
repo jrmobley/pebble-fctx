@@ -1,5 +1,7 @@
 # pebble-fctx
 
+Notice: This codebase will no longer be updated.
+
 This is a graphics library for the Pebble smart watch.
 
 Provides sub-pixel accurate, anti-aliased rendering of filled shapes.  Supports circles, line segments and bezier segments, SVG paths, and SVG fonts.
